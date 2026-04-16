@@ -1,6 +1,6 @@
 /**
- * Main "What's Today" screen — shows the Indian calendar card for the selected date.
- * Features: date strip, shareable card, swipe navigation, notifications.
+ * What's Today — redesigned main screen.
+ * Dark background, large date, single info card with colored sections.
  */
 
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -22,17 +22,40 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 
 import { DateStrip } from "@/components/DateStrip";
-import { TodayCard } from "@/components/TodayCard";
 import { useApp } from "@/context/AppContext";
-import { getCalendarDay, getTodayString } from "@/data/festivals";
-import { useColors } from "@/hooks/useColors";
+import { getCalendarDay, getTodayString, formatDisplayDate } from "@/data/festivals";
+
+// Dark background color — consistent across light/dark mode for this screen
+const DARK_BG = "#0f0f1a";
+const CARD_BG = "#ffffff";
+
+// Section header colors matching the screenshot
+const SECTION_COLORS = {
+  indian: { bg: "#f5a623", text: "#7a3a00" },
+  global: { bg: "#27ae60", text: "#ffffff" },
+  history: { bg: "#5c6bc0", text: "#ffffff" },
+  didYouKnow: { bg: "#f1c40f", text: "#5a4000" },
+};
+
+interface SectionHeaderProps {
+  emoji: string;
+  title: string;
+  color: { bg: string; text: string };
+}
+
+function SectionHeader({ emoji, title, color }: SectionHeaderProps) {
+  return (
+    <View style={[styles.sectionHeader, { backgroundColor: color.bg }]}>
+      <Text style={styles.sectionEmoji}>{emoji}</Text>
+      <Text style={[styles.sectionTitle, { color: color.text }]}>{title}</Text>
+    </View>
+  );
+}
 
 export default function HomeScreen() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { language, setLanguage, selectedDate, setSelectedDate } = useApp();
-  const cardRef = useRef<View>(null);
   const viewShotRef = useRef<ViewShot>(null);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -41,22 +64,21 @@ export default function HomeScreen() {
   const day = getCalendarDay(selectedDate);
   const isToday = selectedDate === todayStr;
 
-  const goToToday = useCallback(() => {
-    setSelectedDate(todayStr);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [todayStr, setSelectedDate]);
-
   const toggleLanguage = useCallback(() => {
     setLanguage(language === "en" ? "mr" : "en");
     Haptics.selectionAsync();
   }, [language, setLanguage]);
+
+  const goToToday = useCallback(() => {
+    setSelectedDate(todayStr);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [todayStr, setSelectedDate]);
 
   const handleShare = useCallback(async () => {
     if (Platform.OS === "web") {
       Alert.alert("Share", isMr ? "वेबवर शेअर उपलब्ध नाही" : "Sharing not available on web");
       return;
     }
-
     setIsSharing(true);
     try {
       if (viewShotRef.current && viewShotRef.current.capture) {
@@ -69,151 +91,195 @@ export default function HomeScreen() {
           });
         }
       }
-    } catch (error) {
-      console.error("Share failed:", error);
+    } catch (e) {
+      console.error("Share error:", e);
     } finally {
       setIsSharing(false);
     }
   }, [isMr]);
 
+  // Build display values
+  const displayDate = formatDisplayDate(selectedDate, language);
+  const vaarText = isMr ? day.vaarMr : day.vaar;
+  const mainEvent = isMr ? (day.mainEventMr ?? day.festivalMr ?? day.mainEvent ?? day.festival) : (day.mainEvent ?? day.festival);
+  const mainEventDesc = isMr ? day.mainEventDescMr ?? day.mainEventDesc : day.mainEventDesc;
+  const indianItems = isMr ? day.indianSignificanceMr : day.indianSignificance;
+  const vrat = isMr ? day.vratMr : day.vrat;
+  const globalObservance = isMr ? day.globalObservanceMr : day.globalObservance;
+  const historyFact = isMr ? day.historyFactMr : day.historyFact;
+  const didYouKnow = isMr ? day.didYouKnowMr ?? day.quoteMr : day.didYouKnow ?? day.quote;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: DARK_BG }]}>
+      {/* Top bar — language + settings */}
       <View
         style={[
-          styles.header,
-          {
-            backgroundColor: colors.primary,
-            paddingTop: insets.top + (Platform.OS === "web" ? 10 : 8),
-          },
+          styles.topBar,
+          { paddingTop: insets.top + (Platform.OS === "web" ? 10 : 6) },
         ]}
       >
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>
-              {isMr ? "आजचे पंचांग" : "WhatsToday"}
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              {isMr ? "भारतीय दिनदर्शिका" : "Indian Calendar"}
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            {/* Language Toggle */}
-            <Pressable
-              onPress={toggleLanguage}
-              style={[styles.langButton, { backgroundColor: "rgba(255,255,255,0.2)" }]}
-            >
-              <Text style={styles.langButtonText}>
-                {language === "en" ? "मराठी" : "Eng"}
-              </Text>
-            </Pressable>
-            {/* Settings */}
-            <Pressable
-              onPress={() => router.push("/settings")}
-              style={[styles.iconButton, { backgroundColor: "rgba(255,255,255,0.2)" }]}
-            >
-              <Feather name="settings" size={18} color="#ffffff" />
-            </Pressable>
-          </View>
-        </View>
+        <Pressable
+          onPress={toggleLanguage}
+          style={styles.langBtn}
+        >
+          <Text style={styles.langBtnText}>
+            {language === "en" ? "मराठी" : "Eng"}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/settings")}
+          style={styles.settingsBtn}
+        >
+          <Feather name="settings" size={18} color="rgba(255,255,255,0.7)" />
+        </Pressable>
       </View>
 
       {/* Date Strip */}
       <DateStrip selectedDate={selectedDate} onDateSelect={setSelectedDate} />
 
-      {/* Main Content */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 16) },
+          { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 20) },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Today button if not on today */}
+        {/* Large date display */}
+        <View style={styles.dateDisplay}>
+          <Text style={styles.dateText}>{displayDate} , {vaarText}</Text>
+        </View>
+
+        {/* Back to today */}
         {!isToday && (
-          <Pressable
-            onPress={goToToday}
-            style={[styles.todayButton, { backgroundColor: colors.secondary, borderColor: colors.primary }]}
-          >
-            <MaterialCommunityIcons name="calendar-today" size={16} color={colors.primary} />
-            <Text style={[styles.todayButtonText, { color: colors.primary }]}>
+          <Pressable onPress={goToToday} style={styles.backTodayBtn}>
+            <MaterialCommunityIcons name="calendar-today" size={14} color="#f5a623" />
+            <Text style={styles.backTodayText}>
               {isMr ? "आजकडे परत जा" : "Back to Today"}
             </Text>
           </Pressable>
         )}
 
-        {/* Shareable Card wrapped in ViewShot */}
+        {/* Main info card wrapped in ViewShot for sharing */}
         <ViewShot
           ref={viewShotRef}
           options={{ format: "png", quality: 1.0 }}
-          style={styles.viewShot}
         >
-          <TodayCard day={day} cardRef={cardRef} />
+          <View style={[styles.mainCard, { backgroundColor: CARD_BG }]}>
+            {/* Share button — top right inside card */}
+            <View style={styles.cardTopRow}>
+              <View style={{ flex: 1 }} />
+              <Pressable
+                onPress={handleShare}
+                disabled={isSharing}
+                style={styles.shareBtn}
+              >
+                {isSharing ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Feather name="share-2" size={14} color="#ffffff" />
+                    <Text style={styles.shareBtnText}>
+                      {isMr ? "शेअर" : "Share"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            {/* Main Event */}
+            {mainEvent ? (
+              <View style={styles.mainEventSection}>
+                <Text style={styles.mainEventTitle}>{mainEvent}</Text>
+                {mainEventDesc ? (
+                  <Text style={styles.mainEventDesc}>{mainEventDesc}</Text>
+                ) : null}
+              </View>
+            ) : (
+              <View style={styles.mainEventSection}>
+                <Text style={styles.mainEventTitle}>
+                  {isMr ? "आजचे पंचांग" : "Today's Panchang"}
+                </Text>
+                <Text style={styles.mainEventDesc}>
+                  {isMr
+                    ? `${day.tithiMr} • ${day.pakshaMr} पक्ष • ${day.nakshtraMr}`
+                    : `${day.tithi} • ${day.paksha} Paksha • ${day.nakshatra}`}
+                </Text>
+              </View>
+            )}
+
+            {/* Indian Significance */}
+            {(indianItems && indianItems.length > 0) || vrat ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  emoji="🇮🇳"
+                  title={isMr ? "भारतीय महत्त्व" : "Indian Significance"}
+                  color={SECTION_COLORS.indian}
+                />
+                <View style={styles.sectionBody}>
+                  {indianItems?.map((item, i) => (
+                    <View key={i} style={styles.bulletRow}>
+                      <View style={[styles.bullet, { backgroundColor: "#3b82f6" }]} />
+                      <Text style={styles.bulletText}>{item}</Text>
+                    </View>
+                  ))}
+                  {vrat ? (
+                    <View style={styles.bulletRow}>
+                      <View style={[styles.bullet, { backgroundColor: "#22c55e" }]} />
+                      <Text style={styles.bulletText}>
+                        {isMr ? "व्रत • " : "Vrat • "}{vrat}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
+            {/* Global Observance */}
+            {globalObservance ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  emoji="🌍"
+                  title={isMr ? "जागतिक पालन" : "Global Observance"}
+                  color={SECTION_COLORS.global}
+                />
+                <View style={styles.sectionBody}>
+                  <Text style={styles.sectionBodyText}>{globalObservance}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* On This Day in History */}
+            {historyFact ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  emoji="⏳"
+                  title={isMr ? "इतिहासातील आजचा दिवस" : "On This Day in History"}
+                  color={SECTION_COLORS.history}
+                />
+                <View style={styles.sectionBody}>
+                  <Text style={styles.sectionBodyText}>{historyFact}</Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Did you Know */}
+            {didYouKnow ? (
+              <View style={[styles.section, { marginBottom: 0 }]}>
+                <View style={styles.didYouKnowHeader}>
+                  <SectionHeader
+                    emoji="💡"
+                    title={isMr ? "माहित आहे का?" : "Did you Know?"}
+                    color={SECTION_COLORS.didYouKnow}
+                  />
+                </View>
+                <View style={styles.sectionBody}>
+                  <Text style={styles.sectionBodyText}>{didYouKnow}</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
         </ViewShot>
-
-        {/* Share Button */}
-        <Pressable
-          onPress={handleShare}
-          disabled={isSharing}
-          style={[
-            styles.shareButton,
-            {
-              backgroundColor: isSharing ? colors.muted : colors.primary,
-              shadowColor: colors.primary,
-            },
-          ]}
-        >
-          {isSharing ? (
-            <ActivityIndicator size="small" color={colors.mutedForeground} />
-          ) : (
-            <>
-              <Feather name="share-2" size={18} color="#ffffff" />
-              <Text style={styles.shareButtonText}>
-                {isMr ? "कार्ड शेअर करा" : "Share Card"}
-              </Text>
-            </>
-          )}
-        </Pressable>
-
-        {/* Quick Info Cards */}
-        <View style={styles.infoRow}>
-          <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <MaterialCommunityIcons
-              name="moon-waning-crescent"
-              size={24}
-              color={colors.infoColor}
-            />
-            <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-              {isMr ? "तिथी" : "Tithi"}
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {isMr ? day.tithiMr : day.tithi}
-            </Text>
-          </View>
-          <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <MaterialCommunityIcons
-              name="star-four-points-outline"
-              size={24}
-              color={colors.infoColor}
-            />
-            <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-              {isMr ? "नक्षत्र" : "Nakshatra"}
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {isMr ? day.nakshtraMr : day.nakshatra}
-            </Text>
-          </View>
-          <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="sun" size={24} color={colors.infoColor} />
-            <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>
-              {isMr ? "पक्ष" : "Paksha"}
-            </Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {isMr ? day.pakshaMr : day.paksha}
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -223,46 +289,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingBottom: 14,
-    paddingHorizontal: 16,
-  },
-  headerContent: {
+  topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: 4,
-  },
-  headerTitle: {
-    color: "#ffffff",
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-  },
-  headerSubtitle: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
+    justifyContent: "flex-end",
     alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    gap: 10,
   },
-  langButton: {
+  langBtn: {
+    backgroundColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 20,
   },
-  langButtonText: {
+  langBtnText: {
     color: "#ffffff",
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  settingsBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -270,71 +320,138 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 16,
-    gap: 16,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 10,
   },
-  viewShot: {
-    // ViewShot wrapper — transparent so card renders naturally
+  dateDisplay: {
+    alignItems: "center",
+    paddingVertical: 10,
   },
-  todayButton: {
+  dateText: {
+    color: "#ffffff",
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  backTodayBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginHorizontal: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
     justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "rgba(245,166,35,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(245,166,35,0.3)",
   },
-  todayButtonText: {
+  backTodayText: {
+    color: "#f5a623",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  mainCard: {
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#27ae60",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  shareBtnText: {
+    color: "#ffffff",
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
-  shareButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    marginHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+  mainEventSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    gap: 5,
   },
-  shareButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  infoRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginHorizontal: 16,
-  },
-  infoCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 14,
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  infoLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+  mainEventTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: "#1a1a2e",
     textAlign: "center",
+  },
+  mainEventDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#666666",
+    textAlign: "center",
+    lineHeight: 19,
+    fontStyle: "italic",
+  },
+  section: {
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    gap: 8,
+  },
+  sectionEmoji: {
+    fontSize: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    flex: 1,
+  },
+  sectionBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  sectionBodyText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#333333",
+    lineHeight: 20,
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  bullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  bulletText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#333333",
+    lineHeight: 20,
+  },
+  didYouKnowHeader: {
+    // wrapper so the section border-top shows correctly
   },
 });
