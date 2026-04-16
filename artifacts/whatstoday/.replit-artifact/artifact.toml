@@ -1,27 +1,28 @@
 kind = "mobile"
-previewPath = "/"
-title = "WhatsToday"
-version = "1.0.0"
-id = "artifacts/whatstoday"
-router = "expo-domain"
+  previewPath = "/"
+  title = "WhatsToday"
+  version = "1.0.0"
+  id = "artifacts/whatstoday"
+  router = "expo-domain"
 
-[[integratedSkills]]
-name = "expo"
-version = "1.0.0"
+  [[integratedSkills]]
+  name = "expo"
+  version = "1.0.0"
 
-[[services]]
-ensurePreviewReachable = "/status"
-name = "expo"
-paths = [ "/" ]
-localPort = 19062
+  [[services]]
+  ensurePreviewReachable = "/status"
+  name = "expo"
+  paths = [ "/" ]
+  localPort = 19062
 
-[services.development]
-run = "pnpm --filter @workspace/whatstoday run dev"
+  [services.development]
+  run = "bash -c 'cd /home/runner/workspace/artifacts/whatstoday && npm run dev'"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/whatstoday", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/whatstoday", "run", "serve" ]
+  [services.production]
+  build = [ "bash", "-c", "cd /home/runner/workspace/artifacts/whatstoday && npm run build" ]
+  run = [ "bash", "-c", "cd /home/runner/workspace/artifacts/whatstoday && npm run serve" ]
 
-[services.env]
-PORT = "19062"
-BASE_PATH = "/"
+  [services.env]
+  PORT = "19062"
+  BASE_PATH = "/"
+  
