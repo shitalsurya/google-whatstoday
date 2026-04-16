@@ -1,0 +1,84 @@
+Create a simple, production-ready mobile app using React Native with Expo.
+
+App Name: WhatsToday
+
+Core Requirements:
+
+1. 📅 Calendar Logic (Kalnirnay-based)
+- Implement Indian calendar logic inspired by Kalnirnay.
+- Show:
+  - Tithi
+  - Nakshatra
+  - Day (वार)
+  - Festivals / Holidays
+- Data can be static JSON or API-based.
+- Support regional language (Marathi + English toggle).
+
+2. 🎨 UI Theme (Google Style)
+- Clean, minimal UI inspired by Google apps.
+- Use:
+  - Soft shadows
+  - Rounded cards
+  - Material Design principles
+- Primary colors: White background + pastel accent (like Google Discover).
+- Use modern fonts and spacing.
+
+3. 📱 “What’s Today” Screen (Main Screen)
+- Top section:
+  - Today’s Date (large and bold)
+  - Day name
+- Middle Card:
+  - Festival / Event name
+  - Tithi + Nakshatra
+- Bottom section:
+  - Motivational quote or message
+- UI should look like a shareable card.
+
+4. 🔔 Daily Notifications
+- Send a push notification every morning (8 AM local time).
+- Content:
+  - Festival name + short message
+- Use Expo Notifications.
+
+5. 📤 Share Card Feature
+- Convert today’s card into an image.
+- Allow sharing via WhatsApp, Instagram, etc.
+- Use:
+  - react-native-view-shot
+  - expo-sharing
+
+6. ⏰ Reminder Scheduling
+- Allow user to set reminder for:
+  - Festivals
+  - Personal events
+- UI:
+  - Simple toggle + time picker
+- Store locally using AsyncStorage.
+
+7. ⚙️ Tech Stack
+- React Native (Expo)
+- Functional components with hooks
+- Use:
+  - React Navigation
+  - AsyncStorage
+  - Expo Notifications
+
+8. 📂 Folder Structure
+- /components
+- /screens
+- /utils (calendar logic)
+- /data (festival JSON)
+- /services (notifications)
+
+9. ✨ Bonus (if possible)
+- Dark mode toggle
+- Swipe between dates
+- Smooth animations
+
+10. 📦 Output Required
+- Fully working Expo project
+- Clean, readable code
+- Comments explaining key logic
+- Sample JSON data for 10–15 days
+
+Focus on simplicity, clean UI, and smooth UX rather than complex backend.

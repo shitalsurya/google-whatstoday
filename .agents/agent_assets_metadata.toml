@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Y9_YHHga5IekZg_pv6OfD"
+uri = "file://artifacts/whatstoday/assets/images/icon.png"
+type = "image"
+title = "whatstoday app icon"
