@@ -1,10 +1,15 @@
 /**
- * Festival and calendar data for WhatsToday app.
- * Based on Indian calendar (Kalnirnay-inspired) for 2025-2026.
+ * Comprehensive Indian Calendar data engine for WhatsToday.
+ * Inspired by Kalnirnay-style coverage: Hindu, Marathi, National & Global days.
+ * Includes recurring yearly logic + manually editable festival entries.
  */
 
+export type FestivalCategory = "hindu" | "marathi" | "national" | "other" | "vrat";
+export type FestivalType = "major" | "minor" | "holiday" | "vrat" | "ekadashi" | "purnima" | "amavasya";
+export type DotColor = "red" | "blue" | "green";
+
 export interface CalendarDay {
-  date: string; // YYYY-MM-DD
+  date: string;
   tithi: string;
   tithiMr: string;
   nakshatra: string;
@@ -13,13 +18,15 @@ export interface CalendarDay {
   vaarMr: string;
   festival?: string;
   festivalMr?: string;
-  festivalType?: "major" | "minor" | "holiday";
-  quote: string;
-  quoteMr: string;
+  festivalType?: FestivalType;
+  category?: FestivalCategory;
   paksha: "Shukla" | "Krishna";
   pakshaMr: "शुक्ल" | "कृष्ण";
+  isHoliday?: boolean;
+  isVrat?: boolean;
+  dotColors?: DotColor[];
 
-  // New fields for the detailed today card
+  // Today card sections
   mainEvent?: string;
   mainEventMr?: string;
   mainEventDesc?: string;
@@ -34,405 +41,236 @@ export interface CalendarDay {
   historyFactMr?: string;
   didYouKnow?: string;
   didYouKnowMr?: string;
+  quote: string;
+  quoteMr: string;
 }
 
-const motivationalQuotes: { en: string; mr: string }[] = [
-  {
-    en: "Every day is a new beginning. Take a deep breath and start again.",
-    mr: "प्रत्येक दिवस नवीन सुरुवात आहे. दीर्घ श्वास घ्या आणि पुन्हा सुरू करा.",
-  },
-  {
-    en: "The sun rises every day, and so does the opportunity to make it great.",
-    mr: "सूर्य दररोज उगवतो, आणि त्याबरोबरच एक महान दिवस घडवण्याची संधीही येते.",
-  },
-  {
-    en: "Life is a celebration. Make every moment count.",
-    mr: "जीवन एक उत्सव आहे. प्रत्येक क्षण अर्थपूर्ण करा.",
-  },
-  {
-    en: "Faith moves mountains. Believe in yourself.",
-    mr: "श्रद्धा पर्वत हलवते. स्वतःवर विश्वास ठेवा.",
-  },
-  {
-    en: "Gratitude turns what we have into enough.",
-    mr: "कृतज्ञता जे आहे त्याला पुरेसे बनवते.",
-  },
-  {
-    en: "A positive mind finds opportunity in every challenge.",
-    mr: "सकारात्मक मन प्रत्येक आव्हानात संधी शोधते.",
-  },
-  {
-    en: "The best way to predict the future is to create it.",
-    mr: "भविष्याचा अंदाज घेण्याचा सर्वोत्तम मार्ग म्हणजे ते निर्माण करणे.",
-  },
-  {
-    en: "Take responsibility and guide someone today with courage.",
-    mr: "आज धाडसाने जबाबदारी घ्या आणि कोणाला मार्गदर्शन करा.",
-  },
-  {
-    en: "Small steps taken daily lead to great destinations.",
-    mr: "दररोज घेतलेली छोटी पावले मोठ्या ध्येयापर्यंत पोहोचवतात.",
-  },
+// ─── Motivational Quotes ──────────────────────────────────────────────────────
+
+const quotes = [
+  { en: "Every day is a new beginning. Take a deep breath and start again.", mr: "प्रत्येक दिवस नवीन सुरुवात आहे. दीर्घ श्वास घ्या आणि पुन्हा सुरू करा." },
+  { en: "The sun rises every day, so does the opportunity to make it great.", mr: "सूर्य दररोज उगवतो — एक महान दिवस घडवण्याची संधीही येते." },
+  { en: "Life is a celebration. Make every moment count.", mr: "जीवन एक उत्सव आहे. प्रत्येक क्षण अर्थपूर्ण करा." },
+  { en: "Faith moves mountains. Believe in yourself.", mr: "श्रद्धा पर्वत हलवते. स्वतःवर विश्वास ठेवा." },
+  { en: "Gratitude turns what we have into enough.", mr: "कृतज्ञता जे आहे त्याला पुरेसे बनवते." },
+  { en: "A positive mind finds opportunity in every challenge.", mr: "सकारात्मक मन प्रत्येक आव्हानात संधी शोधते." },
+  { en: "The best way to predict the future is to create it.", mr: "भविष्याचा अंदाज घेण्याचा सर्वोत्तम मार्ग म्हणजे ते निर्माण करणे." },
+  { en: "Take responsibility and guide someone today with courage.", mr: "आज धाडसाने जबाबदारी घ्या आणि कोणाला मार्गदर्शन करा." },
+  { en: "Small steps taken daily lead to great destinations.", mr: "दररोज घेतलेली छोटी पावले मोठ्या ध्येयापर्यंत पोहोचवतात." },
+  { en: "Your strength is greater than any storm you face.", mr: "तुमची ताकद तुम्ही सामोरे जाणाऱ्या कोणत्याही वादळापेक्षा अधिक आहे." },
+  { en: "Service to humanity is service to God.", mr: "मानवतेची सेवा म्हणजे ईश्वराची सेवा." },
+  { en: "Be the change you wish to see in the world.", mr: "तुम्हाला जगात जो बदल पाहायचा आहे तो स्वतः व्हा." },
+  { en: "In unity there is strength; in division there is weakness.", mr: "एकतेत बळ आहे; विभाजनात दुर्बलता आहे." },
+  { en: "Let your light shine so bright that others can see their way out of the dark.", mr: "आपला प्रकाश इतका उजळवा की इतरांना अंधारातून मार्ग दिसेल." },
 ];
 
-const getQuote = (index: number) => {
-  const q = motivationalQuotes[index % motivationalQuotes.length];
-  return { quote: q.en, quoteMr: q.mr };
-};
+const gq = (i: number) => ({ quote: quotes[i % quotes.length].en, quoteMr: quotes[i % quotes.length].mr });
+
+// ─── Tithis & Nakshatras ──────────────────────────────────────────────────────
+
+const TITHIS = ["Pratipada","Dwitiya","Tritiya","Chaturthi","Panchami","Shashthi","Saptami","Ashtami","Navami","Dashami","Ekadashi","Dwadashi","Trayodashi","Chaturdashi","Purnima / Amavasya"];
+const TITHIS_MR = ["प्रतिपदा","द्वितीया","तृतीया","चतुर्थी","पंचमी","षष्ठी","सप्तमी","अष्टमी","नवमी","दशमी","एकादशी","द्वादशी","त्रयोदशी","चतुर्दशी","पौर्णिमा / अमावस्या"];
+const NAKSHATRAS = ["Ashwini","Bharani","Krittika","Rohini","Mrigashira","Ardra","Punarvasu","Pushya","Ashlesha","Magha","Purva Phalguni","Uttara Phalguni","Hasta","Chitra","Swati","Vishakha","Anuradha","Jyeshtha","Mula","Purva Ashadha","Uttara Ashadha","Shravana","Dhanishtha","Shatabhisha","Purva Bhadrapada","Uttara Bhadrapada","Revati"];
+const NAKSHATRAS_MR = ["अश्विनी","भरणी","कृत्तिका","रोहिणी","मृगशीर्ष","आर्द्रा","पुनर्वसु","पुष्य","आश्लेषा","मघा","पूर्वाफाल्गुनी","उत्तराफाल्गुनी","हस्त","चित्रा","स्वाती","विशाखा","अनुराधा","ज्येष्ठा","मूल","पूर्वाषाढा","उत्तराषाढा","श्रवण","धनिष्ठा","शतभिषा","पूर्वाभाद्रपदा","उत्तराभाद्रपदा","रेवती"];
+const VAARS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const VAARS_MR = ["रविवार","सोमवार","मंगळवार","बुधवार","गुरुवार","शुक्रवार","शनिवार"];
+
+// ─── Marathi Month Engine ─────────────────────────────────────────────────────
+
+export function getMarathiMonth(dateStr: string): { name: string; nameMr: string } {
+  const d = new Date(dateStr);
+  const m = d.getMonth();
+  const day = d.getDate();
+  // Approximate Gregorian → Hindu month mapping
+  if (m === 0 && day <= 13) return { name: "Pausha", nameMr: "पौष" };
+  if (m === 0 || (m === 1 && day <= 11)) return { name: "Magha", nameMr: "माघ" };
+  if (m === 1 || (m === 2 && day <= 13)) return { name: "Phalguna", nameMr: "फाल्गुन" };
+  if (m === 2 || (m === 3 && day <= 12)) return { name: "Chaitra", nameMr: "चैत्र" };
+  if (m === 3 || (m === 4 && day <= 13)) return { name: "Vaishakha", nameMr: "वैशाख" };
+  if (m === 4 || (m === 5 && day <= 14)) return { name: "Jyeshtha", nameMr: "ज्येष्ठ" };
+  if (m === 5 || (m === 6 && day <= 14)) return { name: "Ashadha", nameMr: "आषाढ" };
+  if (m === 6 || (m === 7 && day <= 12)) return { name: "Shravana", nameMr: "श्रावण" };
+  if (m === 7 || (m === 8 && day <= 11)) return { name: "Bhadrapada", nameMr: "भाद्रपद" };
+  if (m === 8 || (m === 9 && day <= 11)) return { name: "Ashwin", nameMr: "आश्विन" };
+  if (m === 9 || (m === 10 && day <= 9)) return { name: "Kartika", nameMr: "कार्तिक" };
+  if (m === 10 || (m === 11 && day <= 8)) return { name: "Margashirsha", nameMr: "मार्गशीर्ष" };
+  return { name: "Pausha", nameMr: "पौष" };
+}
+
+// ─── Dot Color Logic ──────────────────────────────────────────────────────────
+
+export function getDotColors(day: CalendarDay): DotColor[] {
+  const dots: DotColor[] = [];
+  if (day.isHoliday) dots.push("green");
+  if (day.isVrat || day.festivalType === "vrat" || day.festivalType === "ekadashi" || day.festivalType === "amavasya") dots.push("blue");
+  if (day.festival && !day.isVrat && day.festivalType !== "ekadashi") dots.push("red");
+  return [...new Set(dots)];
+}
+
+// ─── Recurring Fixed-Date Festival Logic ──────────────────────────────────────
+
+function getRecurringFestival(dateStr: string): Partial<CalendarDay> | null {
+  const d = new Date(dateStr);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const key = `${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const recurring: Record<string, Partial<CalendarDay>> = {
+    "01-01": { festival: "New Year's Day", festivalMr: "नवीन वर्ष", category: "national", festivalType: "holiday", isHoliday: true, mainEvent: "New Year's Day", mainEventMr: "नवीन वर्ष", mainEventDesc: "Celebration of the start of a new Gregorian calendar year.", mainEventDescMr: "नवीन ग्रेगोरियन वर्षाची सुरुवात.", globalObservance: "New Year's Day — worldwide celebration", globalObservanceMr: "नवीन वर्ष — जगभर उत्सव", historyFact: "1950: India's Constitution came into force, making India a Republic.", historyFactMr: "१९५०: भारताची राज्यघटना लागू झाली आणि भारत प्रजासत्ताक झाला.", didYouKnow: "The tradition of making New Year's resolutions dates back 4,000 years to ancient Babylonians.", didYouKnowMr: "नवीन वर्षाचे संकल्प करण्याची परंपरा ४,००० वर्षांपूर्वी बॅबिलोनियन लोकांकडून सुरू झाली.", ...gq(0) },
+    "01-26": { festival: "Republic Day", festivalMr: "प्रजासत्ताक दिन", category: "national", festivalType: "holiday", isHoliday: true, mainEvent: "Republic Day", mainEventMr: "प्रजासत्ताक दिन", mainEventDesc: "Commemorates the date India's Constitution came into effect, replacing the Government of India Act.", mainEventDescMr: "भारताची राज्यघटना अमलात आली त्या दिवसाचे स्मरण.", indianSignificance: ["National Holiday — Republic Day", "Grand parade at Kartavya Path, New Delhi"], indianSignificanceMr: ["राष्ट्रीय सुट्टी — प्रजासत्ताक दिन", "कर्तव्य पथ, नवी दिल्लीवर भव्य परेड"], historyFact: "1950: India adopted its Constitution, becoming a sovereign democratic republic.", historyFactMr: "१९५०: भारताने आपली राज्यघटना स्वीकारली आणि सार्वभौम लोकशाही प्रजासत्ताक बनला.", didYouKnow: "India's Constitution is the longest written constitution of any country in the world.", didYouKnowMr: "भारताची राज्यघटना जगातील कोणत्याही देशाच्या लेखी राज्यघटनांमध्ये सर्वात मोठी आहे.", ...gq(12) },
+    "02-19": { festival: "Chhatrapati Shivaji Maharaj Jayanti", festivalMr: "छत्रपती शिवाजी महाराज जयंती", category: "marathi", festivalType: "holiday", isHoliday: true, mainEvent: "Shivaji Maharaj Jayanti", mainEventMr: "शिवाजी महाराज जयंती", mainEventDesc: "Birthday of Chhatrapati Shivaji Maharaj, founder of the Maratha Empire.", mainEventDescMr: "मराठा साम्राज्याचे संस्थापक छत्रपती शिवाजी महाराज यांची जयंती.", indianSignificance: ["Shivaji Maharaj Jayanti — Maharashtra Holiday", "Founder of the Maratha Empire"], indianSignificanceMr: ["शिवाजी महाराज जयंती — महाराष्ट्र सुट्टी", "मराठा साम्राज्याचे संस्थापक"], historyFact: "1630: Chhatrapati Shivaji Maharaj was born at Shivneri Fort, Junnar.", historyFactMr: "१६३०: छत्रपती शिवाजी महाराज शिवनेरी किल्ल्यावर, जुन्नरमध्ये जन्मले.", didYouKnow: "Shivaji Maharaj established one of the earliest naval forces in Indian history.", didYouKnowMr: "शिवाजी महाराजांनी भारतीय इतिहासातील सर्वात आधीच्या नौदल दलांपैकी एक स्थापन केले.", ...gq(11) },
+    "03-08": { festival: "International Women's Day", festivalMr: "आंतरराष्ट्रीय महिला दिन", category: "national", festivalType: "minor", globalObservance: "International Women's Day", globalObservanceMr: "आंतरराष्ट्रीय महिला दिन", historyFact: "1910: The International Women's Day was established at the Socialist International conference.", historyFactMr: "१९१०: सोशलिस्ट इंटरनॅशनल परिषदेत आंतरराष्ट्रीय महिला दिनाची स्थापना झाली.", didYouKnow: "India has the world's largest number of women elected to Parliament in a single election (2019).", didYouKnowMr: "भारतात एकाच निवडणुकीत संसदेवर निवडून आलेल्या महिलांची संख्या जगातील सर्वाधिक आहे (२०१९).", ...gq(5) },
+    "04-14": { festival: "Dr. Ambedkar Jayanti", festivalMr: "डॉ. बाबासाहेब आंबेडकर जयंती", category: "national", festivalType: "holiday", isHoliday: true, mainEvent: "Dr. B.R. Ambedkar Jayanti", mainEventMr: "डॉ. बाबासाहेब आंबेडकर जयंती", mainEventDesc: "Birthday of Dr. Bhimrao Ramji Ambedkar, architect of India's Constitution.", mainEventDescMr: "भारतीय राज्यघटनेचे शिल्पकार डॉ. भीमराव रामजी आंबेडकर यांची जयंती.", indianSignificance: ["Ambedkar Jayanti — National Holiday", "Celebration of social justice and equality"], indianSignificanceMr: ["आंबेडकर जयंती — राष्ट्रीय सुट्टी", "सामाजिक न्याय आणि समानतेचा उत्सव"], historyFact: "1891: Dr. B.R. Ambedkar was born in Mhow (Madhya Pradesh). He held 32 academic degrees.", historyFactMr: "१८९१: डॉ. बाबासाहेब आंबेडकर म्हो (मध्यप्रदेश) येथे जन्मले. त्यांच्याकडे ३२ शैक्षणिक पदव्या होत्या.", didYouKnow: "Dr. Ambedkar was the first Indian to pursue a doctorate in economics from abroad.", didYouKnowMr: "डॉ. आंबेडकर परदेशात अर्थशास्त्रात डॉक्टरेट मिळवणारे पहिले भारतीय होते.", ...gq(2) },
+    "04-22": { festival: "Earth Day", festivalMr: "पृथ्वी दिन", category: "national", festivalType: "minor", globalObservance: "Earth Day — Environment Protection", globalObservanceMr: "पृथ्वी दिन — पर्यावरण संरक्षण", historyFact: "1970: The first Earth Day was celebrated with 20 million Americans participating.", historyFactMr: "१९७०: पहिला पृथ्वी दिन साजरा झाला — २ कोटी अमेरिकन नागरिकांनी भाग घेतला.", didYouKnow: "India planted 50 million trees in a single day in 2016, setting a world record.", didYouKnowMr: "भारताने २०१६ मध्ये एकाच दिवसात ५ कोटी झाडे लावून जागतिक विक्रम केला.", ...gq(4) },
+    "05-01": { festival: "Maharashtra Day & Labour Day", festivalMr: "महाराष्ट्र दिन व कामगार दिन", category: "marathi", festivalType: "holiday", isHoliday: true, mainEvent: "Maharashtra Day", mainEventMr: "महाराष्ट्र दिन", mainEventDesc: "Maharashtra was formed as a separate state on this day in 1960.", mainEventDescMr: "१९६० साली महाराष्ट्र स्वतंत्र राज्य म्हणून स्थापन झाला.", indianSignificance: ["Maharashtra Rajyostav — State Holiday", "Formation of Maharashtra state in 1960"], indianSignificanceMr: ["महाराष्ट्र राज्योत्सव — राज्य सुट्टी", "१९६० मध्ये महाराष्ट्र राज्याची स्थापना"], historyFact: "1960: Maharashtra state was formed following the Samyukta Maharashtra Movement.", historyFactMr: "१९६०: संयुक्त महाराष्ट्र आंदोलनाच्या फलस्वरूप महाराष्ट्र राज्याची स्थापना झाली.", didYouKnow: "Maharashtra is the richest state in India by GDP and contributes ~15% of national GDP.", didYouKnowMr: "महाराष्ट्र जीडीपीनुसार भारतातील सर्वात श्रीमंत राज्य असून राष्ट्रीय जीडीपीत ~१५% वाटा आहे.", ...gq(8) },
+    "06-21": { festival: "International Yoga Day", festivalMr: "आंतरराष्ट्रीय योग दिन", category: "national", festivalType: "minor", globalObservance: "International Yoga Day", globalObservanceMr: "आंतरराष्ट्रीय योग दिन", historyFact: "2015: The first International Yoga Day was celebrated worldwide, proposed by India at the UN.", historyFactMr: "२०१५: भारताच्या प्रस्तावावरून संयुक्त राष्ट्रांनी पहिला आंतरराष्ट्रीय योग दिन साजरा केला.", didYouKnow: "Yoga has been practiced in India for over 5,000 years. It is mentioned in the Rig Veda.", didYouKnowMr: "योगाचा सराव भारतात ५,००० वर्षांहून अधिक काळापासून केला जातो. ऋग्वेदात त्याचा उल्लेख आहे.", ...gq(3) },
+    "08-15": { festival: "Independence Day", festivalMr: "स्वातंत्र्य दिन", category: "national", festivalType: "holiday", isHoliday: true, mainEvent: "Independence Day", mainEventMr: "स्वातंत्र्य दिन", mainEventDesc: "India became independent from British rule on 15 August 1947.", mainEventDescMr: "१५ ऑगस्ट १९४७ रोजी भारत ब्रिटिश राजवटीपासून स्वतंत्र झाला.", indianSignificance: ["National Holiday — Independence Day", "Flag hoisting ceremony at Red Fort, Delhi"], indianSignificanceMr: ["राष्ट्रीय सुट्टी — स्वातंत्र्य दिन", "लाल किल्ला, दिल्ली येथे ध्वजारोहण"], historyFact: "1947: India achieved independence after nearly 200 years of British colonial rule.", historyFactMr: "१९४७: जवळपास २०० वर्षांच्या ब्रिटिश वसाहतवादानंतर भारताला स्वातंत्र्य मिळाले.", didYouKnow: "India is the world's largest democracy and the most populous country, with 1.4 billion people.", didYouKnowMr: "भारत जगातील सर्वात मोठी लोकशाही आणि सर्वाधिक लोकसंख्येचा देश आहे — १.४ अब्ज लोक.", ...gq(9) },
+    "09-05": { festival: "Teachers Day", festivalMr: "शिक्षक दिन", category: "national", festivalType: "minor", mainEvent: "Teachers Day", mainEventMr: "शिक्षक दिन", mainEventDesc: "Celebrated on the birthday of Dr. Sarvepalli Radhakrishnan, India's first Vice-President.", mainEventDescMr: "भारताचे पहिले उपराष्ट्रपती डॉ. सर्वपल्ली राधाकृष्णन यांच्या जन्मदिनानिमित्त साजरा होतो.", historyFact: "1888: Dr. Sarvepalli Radhakrishnan was born. He was a philosopher and India's second President.", historyFactMr: "१८८८: डॉ. सर्वपल्ली राधाकृष्णन यांचा जन्म झाला. ते तत्त्वज्ञ आणि भारताचे दुसरे राष्ट्रपती होते.", didYouKnow: "A teacher shapes the future of the nation. 'Guru' in Sanskrit means one who dispels darkness.", didYouKnowMr: "शिक्षक राष्ट्राचे भविष्य घडवतो. संस्कृतमध्ये 'गुरू' म्हणजे अंधार दूर करणारा.", ...gq(7) },
+    "10-02": { festival: "Gandhi Jayanti", festivalMr: "गांधी जयंती", category: "national", festivalType: "holiday", isHoliday: true, mainEvent: "Gandhi Jayanti", mainEventMr: "गांधी जयंती", mainEventDesc: "Birthday of Mahatma Gandhi, Father of the Nation, born on October 2, 1869.", mainEventDescMr: "राष्ट्रपिता महात्मा गांधींची जयंती — जन्म २ ऑक्टोबर १८६९.", indianSignificance: ["Gandhi Jayanti — National Holiday", "International Day of Non-Violence"], indianSignificanceMr: ["गांधी जयंती — राष्ट्रीय सुट्टी", "आंतरराष्ट्रीय अहिंसा दिन"], historyFact: "1869: Mahatma Gandhi was born in Porbandar, Gujarat. He led India to independence through non-violence.", historyFactMr: "१८६९: महात्मा गांधींचा जन्म पोरबंदर, गुजरात येथे झाला. अहिंसेने त्यांनी भारताला स्वातंत्र्य मिळवून दिले.", didYouKnow: "Gandhi's birthday (Oct 2) is observed as the International Day of Non-Violence by the UN.", didYouKnowMr: "गांधींचा वाढदिवस (२ ऑक्टोबर) संयुक्त राष्ट्रांद्वारे आंतरराष्ट्रीय अहिंसा दिन म्हणून पाळला जातो.", ...gq(10) },
+    "11-14": { festival: "Children's Day", festivalMr: "बालदिन", category: "national", festivalType: "minor", mainEvent: "Children's Day", mainEventMr: "बालदिन", mainEventDesc: "Celebrated on the birthday of Pandit Jawaharlal Nehru, who was fondly called 'Chacha Nehru' by children.", mainEventDescMr: "पंडित जवाहरलाल नेहरूंच्या जन्मदिनी साजरा होतो — मुले त्यांना 'चाचा नेहरू' म्हणायचे.", historyFact: "1889: Jawaharlal Nehru was born. He became India's first Prime Minister.", historyFactMr: "१८८९: जवाहरलाल नेहरूंचा जन्म. ते भारताचे पहिले पंतप्रधान बनले.", didYouKnow: "India has the world's largest youth population — about 65% of Indians are under 35.", didYouKnowMr: "भारतात जगातील सर्वात मोठी तरुण लोकसंख्या आहे — सुमारे ६५% भारतीय ३५ वर्षांखालील आहेत.", ...gq(1) },
+    "12-25": { festival: "Christmas", festivalMr: "ख्रिसमस (नाताळ)", category: "other", festivalType: "holiday", isHoliday: true, mainEvent: "Christmas", mainEventMr: "ख्रिसमस", mainEventDesc: "Christian festival celebrating the birth of Jesus Christ.", mainEventDescMr: "येशू ख्रिस्ताच्या जन्माचा उत्सव — ख्रिश्चन सण.", globalObservance: "Christmas — worldwide Christian celebration", globalObservanceMr: "ख्रिसमस — जगभर ख्रिश्चन उत्सव", historyFact: "Christianity came to India with the arrival of Apostle Thomas in 52 AD.", historyFactMr: "प्रेषित थॉमस इ.स. ५२ मध्ये भारतात आल्यावर ख्रिश्चन धर्म भारतात आला.", didYouKnow: "India has the world's 3rd largest Christian population — over 28 million Christians.", didYouKnowMr: "भारतात जगातील तिसरी सर्वात मोठी ख्रिश्चन लोकसंख्या आहे — २ कोटी ८० लाखाहून अधिक.", ...gq(3) },
+  };
+  return recurring[key] ?? null;
+}
+
+// ─── Master Festival Dataset 2025 + 2026 ─────────────────────────────────────
 
 export const calendarData: CalendarDay[] = [
-  // === April 2026 ===
-  {
-    date: "2026-04-16",
-    tithi: "Panchami",
-    tithiMr: "पंचमी",
-    nakshatra: "Ardra",
-    nakshtraMr: "आर्द्रा",
-    vaar: "Thursday",
-    vaarMr: "गुरुवार",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "World Voice Day",
-    mainEventMr: "जागतिक आवाज दिन",
-    mainEventDesc: "Celebrating the phenomenon of voice and raising awareness about voice disorders.",
-    mainEventDescMr: "आवाजाची घटना साजरी करणे आणि आवाजाच्या विकारांबद्दल जागरुकता वाढवणे.",
-    indianSignificance: [
-      "Indian Railways Day (Commemorating the first train run in 1853).",
-      "Tithi • Panchami Shukla Paksha",
-    ],
-    indianSignificanceMr: [
-      "भारतीय रेल्वे दिन (१८५३ मध्ये पहिली गाडी धावली).",
-      "तिथी • शुक्ल पक्ष पंचमी",
-    ],
-    vrat: undefined,
-    globalObservance: "World Voice Day",
-    globalObservanceMr: "जागतिक आवाज दिन",
-    historyFact: "1853: The first passenger train in India ran between Bori Bunder and Thane.",
-    historyFactMr: "१८५३: भारतातील पहिली प्रवासी रेल्वे बोरी बंदर ते ठाणे दरम्यान धावली.",
-    didYouKnow: "Take responsibility and guide someone today with courage.",
-    didYouKnowMr: "आज धाडसाने जबाबदारी घ्या आणि कोणाला मार्गदर्शन करा.",
-    ...getQuote(7),
-  },
-  {
-    date: "2026-04-17",
-    tithi: "Shashthi",
-    tithiMr: "षष्ठी",
-    nakshatra: "Punarvasu",
-    nakshtraMr: "पुनर्वसु",
-    vaar: "Friday",
-    vaarMr: "शुक्रवार",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "World Haemophilia Day",
-    mainEventMr: "जागतिक हिमोफिलिया दिन",
-    mainEventDesc: "Raising awareness about haemophilia and other inherited bleeding disorders.",
-    mainEventDescMr: "हिमोफिलिया आणि इतर आनुवंशिक रक्तस्राव विकारांबद्दल जागरुकता वाढवणे.",
-    indianSignificance: ["Tithi • Shashthi Shukla Paksha"],
-    indianSignificanceMr: ["तिथी • शुक्ल पक्ष षष्ठी"],
-    globalObservance: "World Haemophilia Day",
-    globalObservanceMr: "जागतिक हिमोफिलिया दिन",
-    historyFact: "1524: Vasco da Gama arrived in India for the third time as Viceroy of Portuguese India.",
-    historyFactMr: "१५२४: वास्को द गामा तिसऱ्यांदा पोर्तुगीज भारताचे व्हाइसरॉय म्हणून भारतात आले.",
-    didYouKnow: "The lotus flower, India's national flower, blooms in muddy water — beauty rising from challenges.",
-    didYouKnowMr: "कमळ, भारताचे राष्ट्रीय फूल, चिखलात फुलते — आव्हानांमधून सौंदर्य उदयास येते.",
-    ...getQuote(0),
-  },
-  {
-    date: "2026-04-14",
-    tithi: "Dwitiya",
-    tithiMr: "द्वितीया",
-    nakshatra: "Mrigashira",
-    nakshtraMr: "मृगशीर्ष",
-    vaar: "Tuesday",
-    vaarMr: "मंगळवार",
-    festival: "Ambedkar Jayanti",
-    festivalMr: "आंबेडकर जयंती",
-    festivalType: "holiday",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Ambedkar Jayanti",
-    mainEventMr: "आंबेडकर जयंती",
-    mainEventDesc: "Birthday of Dr. B.R. Ambedkar, the architect of the Indian Constitution.",
-    mainEventDescMr: "डॉ. बाबासाहेब आंबेडकर यांची जयंती — भारतीय राज्यघटनेचे शिल्पकार.",
-    indianSignificance: ["Ambedkar Jayanti — Public Holiday", "Tithi • Dwitiya Shukla Paksha"],
-    indianSignificanceMr: ["आंबेडकर जयंती — सार्वजनिक सुट्टी", "तिथी • शुक्ल पक्ष द्वितीया"],
-    globalObservance: "International Day of Reflection on the 1994 Genocide in Rwanda",
-    globalObservanceMr: "रवांडा नरसंहाराचे स्मरण दिन",
-    historyFact: "1891: Dr. B.R. Ambedkar was born in Mhow, Central Provinces (now Madhya Pradesh).",
-    historyFactMr: "१८९१: डॉ. बाबासाहेब आंबेडकर यांचा जन्म म्हो, मध्य प्रांत (आता मध्य प्रदेश) येथे झाला.",
-    didYouKnow: "Dr. Ambedkar held 32 degrees and could speak 9 languages fluently.",
-    didYouKnowMr: "डॉ. आंबेडकरांकडे ३२ पदव्या होत्या आणि ते ९ भाषा अस्खलितपणे बोलत असत.",
-    ...getQuote(2),
-  },
-  // === 2025 festivals ===
-  {
-    date: "2025-04-14",
-    tithi: "Tritiya",
-    tithiMr: "तृतीया",
-    nakshatra: "Rohini",
-    nakshtraMr: "रोहिणी",
-    vaar: "Monday",
-    vaarMr: "सोमवार",
-    festival: "Gudi Padwa",
-    festivalMr: "गुडी पाडवा",
-    festivalType: "major",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Gudi Padwa",
-    mainEventMr: "गुडी पाडवा",
-    mainEventDesc: "Maharashtrian New Year — celebrated with a decorated Gudi hoisted outside homes.",
-    mainEventDescMr: "महाराष्ट्रीय नवीन वर्ष — घराबाहेर सजवलेली गुडी उभारून साजरे केले जाते.",
-    indianSignificance: ["Marathi New Year (Gudi Padwa)", "Tithi • Tritiya Shukla Paksha", "Vrat • Ugadi"],
-    indianSignificanceMr: ["मराठी नवीन वर्ष (गुडी पाडवा)", "तिथी • शुक्ल पक्ष तृतीया", "व्रत • उगादी"],
-    vrat: "Gudi Padwa Vrat",
-    vratMr: "गुडी पाडवा व्रत",
-    globalObservance: "World Parkinson's Day",
-    globalObservanceMr: "जागतिक पार्किन्सन दिन",
-    historyFact: "1699: Guru Gobind Singh founded the Khalsa Panth on this day.",
-    historyFactMr: "१६९९: गुरू गोबिंद सिंग यांनी खालसा पंथाची स्थापना केली.",
-    didYouKnow: "The Gudi symbolizes victory, prosperity, and the triumph of good over evil.",
-    didYouKnowMr: "गुडी विजय, समृद्धी आणि चांगल्याचा वाईटावरील विजयाचे प्रतीक आहे.",
-    ...getQuote(0),
-  },
-  {
-    date: "2025-04-15",
-    tithi: "Chaturthi",
-    tithiMr: "चतुर्थी",
-    nakshatra: "Mrigashira",
-    nakshtraMr: "मृगशीर्ष",
-    vaar: "Tuesday",
-    vaarMr: "मंगळवार",
-    festival: "Ugadi",
-    festivalMr: "उगादी",
-    festivalType: "major",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Ugadi",
-    mainEventMr: "उगादी",
-    mainEventDesc: "Telugu and Kannada New Year — marked with Bevu-Bella (neem and jaggery).",
-    mainEventDescMr: "तेलुगु आणि कन्नड नवीन वर्ष — बेवू-बेळ्ळा (कडुनिंब आणि गूळ) सह साजरे.",
-    indianSignificance: ["Ugadi — Telugu/Kannada New Year", "Tithi • Chaturthi Shukla Paksha"],
-    indianSignificanceMr: ["उगादी — तेलुगु/कन्नड नवीन वर्ष", "तिथी • शुक्ल पक्ष चतुर्थी"],
-    globalObservance: "World Art Day",
-    globalObservanceMr: "जागतिक कला दिन",
-    historyFact: "1892: The Indian National Congress held its first session in Bombay.",
-    historyFactMr: "१८९२: भारतीय राष्ट्रीय काँग्रेसचे मुंबईत पहिले अधिवेशन झाले.",
-    didYouKnow: "Bevu-Bella in Ugadi represents life's mixture of bitterness and sweetness.",
-    didYouKnowMr: "उगादीतील बेवू-बेळ्ळा जीवनातील कडूगोड मिश्रणाचे प्रतीक आहे.",
-    ...getQuote(1),
-  },
-  {
-    date: "2025-04-20",
-    tithi: "Navami",
-    tithiMr: "नवमी",
-    nakshatra: "Magha",
-    nakshtraMr: "मघा",
-    vaar: "Sunday",
-    vaarMr: "रविवार",
-    festival: "Ram Navami",
-    festivalMr: "रामनवमी",
-    festivalType: "major",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Ram Navami",
-    mainEventMr: "रामनवमी",
-    mainEventDesc: "Birthday of Lord Rama — the seventh avatar of Vishnu, celebrated with prayers and fasting.",
-    mainEventDescMr: "भगवान रामाची जयंती — विष्णूचा सातवा अवतार — प्रार्थना आणि उपवासाने साजरे.",
-    indianSignificance: ["Ram Navami — Rama's Birthday", "Tithi • Navami Shukla Paksha"],
-    indianSignificanceMr: ["रामनवमी — श्रीरामाची जयंती", "तिथी • शुक्ल पक्ष नवमी"],
-    vrat: "Ram Navami Vrat",
-    vratMr: "रामनवमी व्रत",
-    globalObservance: "UN Chinese Language Day",
-    globalObservanceMr: "संयुक्त राष्ट्र चीनी भाषा दिन",
-    historyFact: "1303: Alauddin Khalji conquered Chittor Fort after a long siege.",
-    historyFactMr: "१३०३: अलाउद्दीन खिलजीने दीर्घ वेढ्यानंतर चित्तोड किल्ला जिंकला.",
-    didYouKnow: "The Ramayana has over 300 different versions across Asia.",
-    didYouKnowMr: "रामायणाच्या आशियाभर ३०० हून अधिक वेगळ्या आवृत्त्या आहेत.",
-    ...getQuote(6),
-  },
-  {
-    date: "2025-04-22",
-    tithi: "Ekadashi",
-    tithiMr: "एकादशी",
-    nakshatra: "Uttara Phalguni",
-    nakshtraMr: "उत्तराफाल्गुनी",
-    vaar: "Tuesday",
-    vaarMr: "मंगळवार",
-    festival: "Kamada Ekadashi",
-    festivalMr: "कामदा एकादशी",
-    festivalType: "minor",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Kamada Ekadashi",
-    mainEventMr: "कामदा एकादशी",
-    mainEventDesc: "A sacred Ekadashi fast that fulfils all desires and removes sins.",
-    mainEventDescMr: "एक पवित्र एकादशी उपवास जो सर्व इच्छा पूर्ण करतो आणि पाप नष्ट करतो.",
-    indianSignificance: ["Kamada Ekadashi Vrat", "Tithi • Ekadashi Shukla Paksha"],
-    indianSignificanceMr: ["कामदा एकादशी व्रत", "तिथी • शुक्ल पक्ष एकादशी"],
-    vrat: "Kamada Ekadashi",
-    vratMr: "कामदा एकादशी",
-    globalObservance: "Earth Day",
-    globalObservanceMr: "पृथ्वी दिन",
-    historyFact: "1970: The first Earth Day was celebrated worldwide.",
-    historyFactMr: "१९७०: पहिला पृथ्वी दिन जगभर साजरा झाला.",
-    didYouKnow: "Ekadashi fasting is observed twice a month on the 11th day of each lunar fortnight.",
-    didYouKnowMr: "एकादशी उपवास दर महिन्यात दोनदा, प्रत्येक चंद्र पक्षाच्या ११व्या दिवशी केला जातो.",
-    ...getQuote(1),
-  },
-  {
-    date: "2025-04-26",
-    tithi: "Purnima",
-    tithiMr: "पौर्णिमा",
-    nakshatra: "Vishakha",
-    nakshtraMr: "विशाखा",
-    vaar: "Saturday",
-    vaarMr: "शनिवार",
-    festival: "Hanuman Jayanti",
-    festivalMr: "हनुमान जयंती",
-    festivalType: "major",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Hanuman Jayanti",
-    mainEventMr: "हनुमान जयंती",
-    mainEventDesc: "Birthday of Lord Hanuman — the symbol of devotion, strength, and service.",
-    mainEventDescMr: "हनुमानाची जयंती — भक्ती, शक्ती आणि सेवेचे प्रतीक.",
-    indianSignificance: ["Hanuman Jayanti", "Purnima (Full Moon)", "Tithi • Purnima Shukla Paksha"],
-    indianSignificanceMr: ["हनुमान जयंती", "पौर्णिमा (पूर्ण चंद्र)", "तिथी • शुक्ल पक्ष पौर्णिमा"],
-    globalObservance: "World Intellectual Property Day",
-    globalObservanceMr: "जागतिक बौद्धिक संपदा दिन",
-    historyFact: "1986: The Chernobyl nuclear disaster occurred in Soviet Ukraine.",
-    historyFactMr: "१९८६: सोव्हिएत युक्रेनमध्ये चेर्नोबिल अण्वस्त्र दुर्घटना घडली.",
-    didYouKnow: "Hanuman Chalisa, written by Tulsidas, has 40 verses and is one of the most recited texts in India.",
-    didYouKnowMr: "तुलसीदासांनी लिहिलेल्या हनुमान चालीसात ४० श्लोक आहेत — भारतातील सर्वाधिक पठित ग्रंथांपैकी एक.",
-    ...getQuote(5),
-  },
-  {
-    date: "2025-08-27",
-    tithi: "Chaturthi",
-    tithiMr: "चतुर्थी",
-    nakshatra: "Hasta",
-    nakshtraMr: "हस्त",
-    vaar: "Wednesday",
-    vaarMr: "बुधवार",
-    festival: "Ganesh Chaturthi",
-    festivalMr: "गणेश चतुर्थी",
-    festivalType: "major",
-    paksha: "Shukla",
-    pakshaMr: "शुक्ल",
-    mainEvent: "Ganesh Chaturthi",
-    mainEventMr: "गणेश चतुर्थी",
-    mainEventDesc: "The grand 10-day festival celebrating the birth of Lord Ganesha, the remover of obstacles.",
-    mainEventDescMr: "भगवान गणेशाच्या जन्माचा भव्य १०-दिवसीय उत्सव — विघ्नहर्त्याचा सण.",
-    indianSignificance: ["Ganesh Chaturthi begins", "Tithi • Chaturthi Shukla Paksha"],
-    indianSignificanceMr: ["गणेश चतुर्थी सुरू", "तिथी • शुक्ल पक्ष चतुर्थी"],
-    vrat: "Ganesh Chaturthi Vrat",
-    vratMr: "गणेश चतुर्थी व्रत",
-    globalObservance: "Silent Day (Bhutan)",
-    globalObservanceMr: "शांत दिन (भूतान)",
-    historyFact: "1893: Lokmanya Bal Gangadhar Tilak started the public Ganesh Chaturthi festival.",
-    historyFactMr: "१८९३: लोकमान्य बाळ गंगाधर टिळक यांनी सार्वजनिक गणेशोत्सव सुरू केला.",
-    didYouKnow: "Ganeshotsav was started by Tilak to bring communities together during the freedom struggle.",
-    didYouKnowMr: "टिळकांनी स्वातंत्र्यसंग्रामात समाजाला एकत्र आणण्यासाठी गणेशोत्सव सुरू केला.",
-    ...getQuote(1),
-  },
-  {
-    date: "2025-10-20",
-    tithi: "Amavasya",
-    tithiMr: "अमावस्या",
-    nakshatra: "Swati",
-    nakshtraMr: "स्वाती",
-    vaar: "Monday",
-    vaarMr: "सोमवार",
-    festival: "Diwali (Lakshmi Puja)",
-    festivalMr: "दिवाळी (लक्ष्मी पूजा)",
-    festivalType: "major",
-    paksha: "Krishna",
-    pakshaMr: "कृष्ण",
-    mainEvent: "Diwali — Lakshmi Puja",
-    mainEventMr: "दिवाळी — लक्ष्मी पूजा",
-    mainEventDesc: "The festival of lights — celebrating the victory of light over darkness.",
-    mainEventDescMr: "दिव्यांचा सण — प्रकाशाचा अंधारावर विजय साजरा करण्याचा उत्सव.",
-    indianSignificance: ["Diwali — Lakshmi Puja (Main Day)", "Amavasya — New Moon Night", "Tithi • Amavasya Krishna Paksha"],
-    indianSignificanceMr: ["दिवाळी — लक्ष्मी पूजा (मुख्य दिवस)", "अमावस्या — नवीन चंद्र रात्र", "तिथी • कृष्ण पक्ष अमावस्या"],
-    vrat: "Lakshmi Puja Vrat",
-    vratMr: "लक्ष्मी पूजा व्रत",
-    globalObservance: "Diwali — observed worldwide",
-    globalObservanceMr: "दिवाळी — जगभर साजरी",
-    historyFact: "1947: Lord Mountbatten and Nehru lit the first official Independence Day lamp.",
-    historyFactMr: "१९४७: लॉर्ड माउंटबॅटन आणि नेहरूंनी पहिला अधिकृत स्वातंत्र्य दिनाचा दिवा प्रज्वलित केला.",
-    didYouKnow: "India uses about 50,000 tonnes of firecrackers during Diwali season.",
-    didYouKnowMr: "दिवाळीच्या हंगामात भारत सुमारे ५०,००० टन फटाके वापरतो.",
-    ...getQuote(3),
-  },
+  // ═══════ 2025 ═══════
+  // January 2025
+  { date:"2025-01-13", tithi:"Dwadashi", tithiMr:"द्वादशी", nakshatra:"Purva Phalguni", nakshtraMr:"पूर्वाफाल्गुनी", vaar:"Monday", vaarMr:"सोमवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Lohri", festivalMr:"लोहरी", festivalType:"minor", category:"national", mainEvent:"Lohri", mainEventMr:"लोहरी", mainEventDesc:"Punjabi harvest festival celebrated with bonfires, folk songs and dancing.", mainEventDescMr:"पंजाबी कापणी उत्सव — शेकोट्या, लोकगीते आणि नृत्याने साजरा.", indianSignificance:["Lohri — Punjabi harvest festival","Tithi • Dwadashi Krishna Paksha"], indianSignificanceMr:["लोहरी — पंजाबी कापणी उत्सव","तिथी • कृष्ण पक्ष द्वादशी"], historyFact:"Punjab's Lohri has been celebrated for over 1,000 years, welcoming the end of winter solstice.", historyFactMr:"पंजाबचा लोहरी सण १,००० वर्षांहून अधिक काळापासून साजरा होतो — हिवाळ्याच्या अयनांतानंतर.", didYouKnow:"Lohri marks the end of winter and the beginning of longer days in North India.", didYouKnowMr:"लोहरी उत्तर भारतात हिवाळ्याचा अंत आणि मोठ्या दिवसांची सुरुवात दर्शवते.", ...gq(6) },
+  { date:"2025-01-14", tithi:"Trayodashi", tithiMr:"त्रयोदशी", nakshatra:"Uttara Phalguni", nakshtraMr:"उत्तराफाल्गुनी", vaar:"Tuesday", vaarMr:"मंगळवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Makar Sankranti", festivalMr:"मकर संक्रांती", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Makar Sankranti", mainEventMr:"मकर संक्रांती", mainEventDesc:"Sun's transition into Capricorn (Makar) — celebrated with sesame sweets, kite flying and harvest thanks.", mainEventDescMr:"सूर्याचे मकर राशीत प्रवेश — तीळगूळ, पतंग उडवणे आणि कापणीचे आभार.", indianSignificance:["Makar Sankranti — Harvest Festival","Pongal (Tamil Nadu) • Uttarayan (Gujarat)","Tithi • Trayodashi Krishna Paksha"], indianSignificanceMr:["मकर संक्रांती — कापणी उत्सव","पोंगल (तामिळनाडू) • उत्तरायण (गुजरात)","तिथी • कृष्ण पक्ष त्रयोदशी"], historyFact:"1761: The Third Battle of Panipat was fought, changing the course of Maratha history.", historyFactMr:"१७६१: पानिपतची तिसरी लढाई झाली — मराठा इतिहासाची दिशा बदलली.", didYouKnow:"'Til-Gul ghya, god god bola' — Sesame-jaggery sweets symbolize sweetness in relationships.", didYouKnowMr:"'तीळगूळ घ्या, गोड गोड बोला' — तीळ-गुळाचे गोड पदार्थ नातेसंबंधातील गोडवा दर्शवतात.", ...gq(2) },
+
+  // February 2025
+  { date:"2025-02-26", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Shatabhisha", nakshtraMr:"शतभिषा", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Maha Shivratri", festivalMr:"महाशिवरात्री", festivalType:"major", category:"hindu", isHoliday:true, isVrat:true, mainEvent:"Maha Shivratri", mainEventMr:"महाशिवरात्री", mainEventDesc:"The great night of Lord Shiva — devotees fast and perform Shiv Puja through the night.", mainEventDescMr:"भगवान शिवाची महान रात्र — भक्त उपवास करतात आणि रात्रभर शिव पूजा करतात.", indianSignificance:["Maha Shivratri — Shiva's great night","All-night vigil (Jaagran) and fasting","Tithi • Chaturdashi Krishna Paksha"], indianSignificanceMr:["महाशिवरात्री — शिवाची महान रात्र","रात्रभर जागरण आणि उपवास","तिथी • कृष्ण पक्ष चतुर्दशी"], vrat:"Maha Shivratri Vrat", vratMr:"महाशिवरात्री व्रत", historyFact:"Maha Shivratri marks the night when Lord Shiva performed the Tandava — the dance of creation.", historyFactMr:"महाशिवरात्री ती रात्र चिन्हांकित करते जेव्हा भगवान शिवाने तांडव — सृष्टीचे नृत्य — केले.", didYouKnow:"'Shiva' means 'The Auspicious One'. Shiva temples exist on every continent.", didYouKnowMr:"'शिव' म्हणजे 'मंगलदायी'. प्रत्येक खंडावर शिव मंदिरे आहेत.", ...gq(3) },
+
+  // March 2025
+  { date:"2025-03-13", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Uttara Phalguni", nakshtraMr:"उत्तराफाल्गुनी", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Holi Dahan (Holika Dahan)", festivalMr:"होलिका दहन", festivalType:"major", category:"hindu", mainEvent:"Holika Dahan", mainEventMr:"होलिका दहन", mainEventDesc:"Bonfire lit the night before Holi, symbolizing victory of good over evil.", mainEventDescMr:"होळीच्या आधीची रात्र — होलिका दहन, चांगल्याचा वाईटावरील विजयाचे प्रतीक.", indianSignificance:["Holika Dahan — Eve of Holi","Bonfire ritual to burn evil","Tithi • Chaturdashi Shukla Paksha"], indianSignificanceMr:["होलिका दहन — होळीची पूर्वसंध्या","दुष्टाचा नाश करणारी शेकोटी","तिथी • शुक्ल पक्ष चतुर्दशी"], isVrat:false, historyFact:"The legend of Holika and Prahlada originates in the Vishnu Purana, dating back 3000+ years.", historyFactMr:"होलिका आणि प्रल्हादाची कथा विष्णुपुराणात आहे — ३,०००+ वर्षे जुनी.", didYouKnow:"Holika is the demon king Hiranyakashipu's sister who tried to burn Prahlada but perished herself.", didYouKnowMr:"होलिका राक्षसराज हिरण्यकश्यपूची बहीण होती जिने प्रल्हादाला जाळण्याचा प्रयत्न केला पण स्वतःच जळाली.", ...gq(0) },
+  { date:"2025-03-14", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Hasta", nakshtraMr:"हस्त", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Holi", festivalMr:"होळी", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Holi — Festival of Colours", mainEventMr:"होळी — रंगांचा सण", mainEventDesc:"The festival of colours marking the triumph of good over evil and the arrival of spring.", mainEventDescMr:"चांगल्याचा वाईटावरील विजय आणि वसंत ऋतूच्या आगमनाचा रंगांचा सण.", indianSignificance:["Holi — Festival of Colours","Phalguna Purnima (Full Moon)","Tithi • Purnima Shukla Paksha"], indianSignificanceMr:["होळी — रंगांचा सण","फाल्गुन पौर्णिमा (पूर्ण चंद्र)","तिथी • शुक्ल पक्ष पौर्णिमा"], historyFact:"Holi is 2,500+ years old. It is mentioned in Narad Purana and Bhavishya Purana.", historyFactMr:"होळी २,५०० वर्षांहून जुनी आहे. नारद पुराण आणि भविष्य पुराणात उल्लेख आहे.", didYouKnow:"In Vrindavan and Mathura, Holi celebrations last for 16 days known as 'Phoolon wali Holi'.", didYouKnowMr:"वृंदावन आणि मथुरेत होळी उत्सव १६ दिवस साजरा होतो — 'फूलों वाली होली' म्हणून ओळखला जातो.", ...gq(5) },
+  { date:"2025-03-30", tithi:"Pratipada", tithiMr:"प्रतिपदा", nakshatra:"Uttara Bhadrapada", nakshtraMr:"उत्तराभाद्रपदा", vaar:"Sunday", vaarMr:"रविवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Gudi Padwa", festivalMr:"गुडी पाडवा", festivalType:"major", category:"marathi", isHoliday:true, mainEvent:"Gudi Padwa — Marathi New Year", mainEventMr:"गुडी पाडवा — मराठी नवीन वर्ष", mainEventDesc:"Maharashtrian New Year — a decorated Gudi (flag) is hoisted outside homes for prosperity.", mainEventDescMr:"महाराष्ट्रीय नवीन वर्ष — घराबाहेर सजवलेली गुडी (झेंडा) उभारला जातो.", indianSignificance:["Gudi Padwa — Marathi New Year","Ugadi (Telugu/Kannada New Year)","Chaitra Shukla Pratipada"], indianSignificanceMr:["गुडी पाडवा — मराठी नवीन वर्ष","उगादी (तेलुगु/कन्नड नवीन वर्ष)","चैत्र शुक्ल प्रतिपदा"], historyFact:"1630: Shivaji Maharaj was born near this time. He later led the Maratha Empire to glory.", historyFactMr:"१६३०: शिवाजी महाराज यांचा जन्म याच काळात झाला. नंतर त्यांनी मराठा साम्राज्य उभारले.", didYouKnow:"The Gudi symbolizes victory, prosperity and the triumph of good over evil.", didYouKnowMr:"गुडी विजय, समृद्धी आणि चांगल्याचा वाईटावरील विजयाचे प्रतीक आहे.", ...gq(9) },
+
+  // April 2025
+  { date:"2025-04-06", tithi:"Navami", tithiMr:"नवमी", nakshatra:"Punarvasu", nakshtraMr:"पुनर्वसु", vaar:"Sunday", vaarMr:"रविवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ram Navami", festivalMr:"रामनवमी", festivalType:"major", category:"hindu", isHoliday:true, isVrat:true, mainEvent:"Ram Navami", mainEventMr:"रामनवमी", mainEventDesc:"Birthday of Lord Rama — the seventh avatar of Vishnu, revered for righteousness and dharma.", mainEventDescMr:"भगवान रामाची जयंती — विष्णूचा सातवा अवतार — धार्मिकता आणि धर्मासाठी पूजनीय.", indianSignificance:["Ram Navami — Rama's Birthday","Chaitra Shukla Navami","Tithi • Navami Shukla Paksha"], indianSignificanceMr:["रामनवमी — श्रीरामाची जयंती","चैत्र शुक्ल नवमी","तिथी • शुक्ल पक्ष नवमी"], vrat:"Ram Navami Vrat", vratMr:"रामनवमी व्रत", historyFact:"Ramayana was composed by Valmiki — it is 2,400+ years old and has over 300 versions across Asia.", historyFactMr:"रामायण वाल्मिकींनी लिहिले — ते २,४०० वर्षांहून जुने आहे आणि आशियात ३०० हून अधिक आवृत्त्या आहेत.", didYouKnow:"'Jai Shri Ram' is one of the most chanted mantras in India, especially in North India.", didYouKnowMr:"'जय श्री राम' भारतातील सर्वाधिक उच्चारल्या जाणाऱ्या मंत्रांपैकी एक आहे.", ...gq(11) },
+  { date:"2025-04-10", tithi:"Ekadashi", tithiMr:"एकादशी", nakshatra:"Ashlesha", nakshtraMr:"आश्लेषा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Kamada Ekadashi", festivalMr:"कामदा एकादशी", festivalType:"ekadashi", category:"vrat", isVrat:true, mainEvent:"Kamada Ekadashi", mainEventMr:"कामदा एकादशी", mainEventDesc:"A sacred Ekadashi fast on Chaitra Shukla 11th — fulfils desires and removes sins.", mainEventDescMr:"चैत्र शुक्ल ११वीला पवित्र एकादशी उपवास — इच्छापूर्ती करतो आणि पाप नाशक.", indianSignificance:["Kamada Ekadashi Vrat","Chaitra Shukla Ekadashi"], indianSignificanceMr:["कामदा एकादशी व्रत","चैत्र शुक्ल एकादशी"], vrat:"Kamada Ekadashi", vratMr:"कामदा एकादशी", didYouKnow:"Ekadashi fasting is observed twice monthly on the 11th day of each lunar fortnight.", didYouKnowMr:"एकादशी उपवास दर महिन्यात दोनदा, प्रत्येक चंद्र पक्षाच्या ११व्या दिवशी केला जातो.", historyFact:"Ekadashi fasting is mentioned in the Padma Purana, a text over 1,500 years old.", historyFactMr:"एकादशी उपवासाचा उल्लेख पद्म पुराणात आहे — हा ग्रंथ १,५०० वर्षांहून जुना आहे.", ...gq(4) },
+  { date:"2025-04-12", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Chitra", nakshtraMr:"चित्रा", vaar:"Saturday", vaarMr:"शनिवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Hanuman Jayanti", festivalMr:"हनुमान जयंती", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Hanuman Jayanti", mainEventMr:"हनुमान जयंती", mainEventDesc:"Birthday of Lord Hanuman — symbol of devotion, strength, courage and selfless service.", mainEventDescMr:"हनुमानाची जयंती — भक्ती, शक्ती, धैर्य आणि निःस्वार्थ सेवेचे प्रतीक.", indianSignificance:["Hanuman Jayanti","Chaitra Purnima (Full Moon)","Tithi • Purnima Shukla Paksha"], indianSignificanceMr:["हनुमान जयंती","चैत्र पौर्णिमा (पूर्ण चंद्र)","तिथी • शुक्ल पक्ष पौर्णिमा"], historyFact:"Hanuman Chalisa, written by Tulsidas (16th century), is recited by millions daily.", historyFactMr:"तुलसीदासांनी (१६व्या शतकात) लिहिलेला हनुमान चालीसा कोट्यवधी लोक दररोज पठण करतात.", didYouKnow:"Hanuman Chalisa has 40 verses and is one of the most recited texts in Hinduism.", didYouKnowMr:"हनुमान चालीसात ४० श्लोक आहेत — हिंदू धर्मातील सर्वाधिक पठित ग्रंथांपैकी एक.", ...gq(7) },
+  { date:"2025-04-18", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Vishakha", nakshtraMr:"विशाखा", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Good Friday", festivalMr:"गुड फ्रायडे", festivalType:"holiday", category:"other", isHoliday:true, mainEvent:"Good Friday", mainEventMr:"गुड फ्रायडे", mainEventDesc:"Christian observance commemorating the crucifixion of Jesus Christ at Calvary.", mainEventDescMr:"कॅल्व्हरी येथे येशू ख्रिस्ताच्या वधस्तंभावर मृत्यूचे स्मरण.", globalObservance: "Good Friday — Christian observance worldwide", globalObservanceMr:"गुड फ्रायडे — जगभर ख्रिश्चन पालन", historyFact:"Good Friday is observed on the Friday before Easter Sunday, based on the Crucifixion of Jesus.", historyFactMr:"इस्टर रविवाराच्या आधीच्या शुक्रवारी गुड फ्रायडे पाळला जातो — येशूच्या वधस्तंभावर चढवण्याच्या स्मरणार्थ.", didYouKnow:"India is a secular country — Good Friday is a public holiday in many Indian states.", didYouKnowMr:"भारत धर्मनिरपेक्ष देश आहे — गुड फ्रायडे अनेक भारतीय राज्यांमध्ये सार्वजनिक सुट्टी आहे.", ...gq(1) },
+  { date:"2025-04-30", tithi:"Tritiya", tithiMr:"तृतीया", nakshatra:"Rohini", nakshtraMr:"रोहिणी", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Akshaya Tritiya", festivalMr:"अक्षय तृतीया", festivalType:"major", category:"hindu", isVrat:true, mainEvent:"Akshaya Tritiya", mainEventMr:"अक्षय तृतीया", mainEventDesc:"Auspicious day for new beginnings, gold purchases and charitable acts — wealth accumulated on this day never diminishes.", mainEventDescMr:"नवीन सुरुवात, सोने खरेदी आणि दान यासाठी शुभ दिवस — या दिवशी जमवलेली संपत्ती कधीच कमी होत नाही.", indianSignificance:["Akshaya Tritiya — Vaishakha Shukla 3rd","Most auspicious day for gold purchase","Tithi • Tritiya Shukla Paksha"], indianSignificanceMr:["अक्षय तृतीया — वैशाख शुक्ल तृतीया","सोने खरेदीसाठी सर्वात शुभ दिवस","तिथी • शुक्ल पक्ष तृतीया"], historyFact:"On Akshaya Tritiya, the Mahabharata war began according to some traditions.", historyFactMr:"काही परंपरेनुसार अक्षय तृतीयेला महाभारत युद्ध सुरू झाले.", didYouKnow:"'Akshaya' means 'never diminishing'. The word comes from Sanskrit — 'a' (not) + 'kshaya' (decay).", didYouKnowMr:"'अक्षय' म्हणजे 'कधीही न संपणारे'. संस्कृतमधून — 'अ' (नाही) + 'क्षय' (नाश).", ...gq(8) },
+
+  // May 2025
+  { date:"2025-05-12", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Vishakha", nakshtraMr:"विशाखा", vaar:"Monday", vaarMr:"सोमवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Buddha Purnima", festivalMr:"बुद्ध पौर्णिमा", festivalType:"major", category:"other", isHoliday:true, mainEvent:"Buddha Purnima", mainEventMr:"बुद्ध पौर्णिमा", mainEventDesc:"Birth, Enlightenment and Mahaparinirvana of Gautama Buddha — celebrated by Buddhists worldwide.", mainEventDescMr:"गौतम बुद्धांचा जन्म, ज्ञानप्राप्ती आणि महापरिनिर्वाण — जगभरातील बौद्ध हा दिवस साजरा करतात.", indianSignificance:["Buddha Purnima — National Holiday","Vaishakha Purnima"], indianSignificanceMr:["बुद्ध पौर्णिमा — राष्ट्रीय सुट्टी","वैशाख पौर्णिमा"], historyFact:"563 BCE: Siddhartha Gautama (Buddha) was born in Lumbini, Nepal. He attained Enlightenment at Bodh Gaya, India.", historyFactMr:"इ.स.पू. ५६३: सिद्धार्थ गौतम (बुद्ध) नेपाळमधील लुंबिनी येथे जन्मले. त्यांनी बोधगया, भारत येथे ज्ञान प्राप्त केले.", didYouKnow:"Bodh Gaya, Bihar, where Buddha attained enlightenment under the Bodhi tree, is a UNESCO World Heritage Site.", didYouKnowMr:"बोधगया, बिहार — जिथे बुद्धाने बोधी वृक्षाखाली ज्ञान प्राप्त केले — युनेस्को जागतिक वारसा स्थळ आहे.", ...gq(6) },
+  { date:"2025-05-26", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Anuradha", nakshtraMr:"अनुराधा", vaar:"Monday", vaarMr:"सोमवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Vat Pournima", festivalMr:"वट पौर्णिमा", festivalType:"major", category:"marathi", isVrat:true, mainEvent:"Vat Pournima", mainEventMr:"वट पौर्णिमा", mainEventDesc:"Married women fast and worship the banyan tree for the longevity of their husbands.", mainEventDescMr:"विवाहित महिला पतीच्या दीर्घायुष्यासाठी उपवास करतात आणि वडाच्या झाडाची पूजा करतात.", indianSignificance:["Vat Pournima — Jyeshtha Purnima","Savitri-Satyavan worship","Married women's vrat"], indianSignificanceMr:["वट पौर्णिमा — ज्येष्ठ पौर्णिमा","सावित्री-सत्यवान पूजा","सुहासिनींचे व्रत"], vrat:"Vat Pournima Vrat", vratMr:"वट पौर्णिमा व्रत", historyFact:"The legend of Savitri and Satyavan — how Savitri defeated Yama (god of death) through her devotion.", historyFactMr:"सावित्री-सत्यवानाची कथा — सावित्रीने आपल्या भक्तीने यमाला (मृत्युदेव) कसे जिंकले.", didYouKnow:"The Banyan tree (Vat/Bargad) is India's national tree — it can live for thousands of years.", didYouKnowMr:"वटवृक्ष (वड/बरगड) भारताचे राष्ट्रीय झाड आहे — हजारो वर्षे जगू शकते.", ...gq(10) },
+
+  // June 2025
+  { date:"2025-06-06", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Magha", nakshtraMr:"मघा", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Eid ul-Adha (approx.)", festivalMr:"ईद-उल-अधा (अंदाजे)", festivalType:"holiday", category:"other", isHoliday:true, mainEvent:"Eid ul-Adha", mainEventMr:"ईद-उल-अधा (बकरी ईद)", mainEventDesc:"Islamic festival of sacrifice, commemorating Ibrahim's willingness to sacrifice his son as ordered by God.", mainEventDescMr:"इब्राहिमने अल्लाहच्या आदेशाने आपल्या पुत्राचे बलिदान करण्याची तयारी दर्शवली त्याचे स्मरण.", globalObservance:"Eid ul-Adha — Islamic festival worldwide", globalObservanceMr:"ईद-उल-अधा — जगभर इस्लामिक सण", historyFact:"India has the world's 3rd largest Muslim population — approximately 200 million Muslims.", historyFactMr:"भारतात जगातील तिसरी सर्वात मोठी मुस्लिम लोकसंख्या आहे — सुमारे २० कोटी मुस्लिम.", didYouKnow:"Eid dates shift each year as the Islamic calendar is lunar-based (11 days shorter than Gregorian).", didYouKnowMr:"ईदच्या तारखा दरवर्षी बदलतात कारण इस्लामिक कॅलेंडर चंद्रावर आधारित आहे (ग्रेगोरियनपेक्षा ११ दिवस कमी).", ...gq(12) },
+  { date:"2025-06-26", tithi:"Pratipada", tithiMr:"प्रतिपदा", nakshatra:"Uttara Ashadha", nakshtraMr:"उत्तराषाढा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Rath Yatra", festivalMr:"रथ यात्रा", festivalType:"major", category:"hindu", mainEvent:"Rath Yatra", mainEventMr:"रथ यात्रा", mainEventDesc:"Annual chariot procession of Lord Jagannath at Puri, Odisha — one of the biggest religious gatherings.", mainEventDescMr:"पुरी, ओडिशामध्ये भगवान जगन्नाथाची वार्षिक रथयात्रा — सर्वात मोठ्या धार्मिक सोहळ्यांपैकी एक.", indianSignificance:["Rath Yatra — Puri, Odisha","Ashadha Shukla Dwitiya"], indianSignificanceMr:["रथ यात्रा — पुरी, ओडिशा","आषाढ शुक्ल द्वितीया"], historyFact:"Puri Rath Yatra has been celebrated for 2,000+ years. The Juggernaut (huge chariot) is 45 feet tall.", historyFactMr:"पुरी रथयात्रा २,०००+ वर्षांपासून साजरी होते. जगन्नाथाचा रथ ४५ फूट उंच असतो.", didYouKnow:"The English word 'Juggernaut' (something unstoppable) comes from the Jagannath Rath Yatra.", didYouKnowMr:"इंग्रजी 'जगर्नॉट' शब्द (थांबवता न येणारी गोष्ट) जगन्नाथ रथयात्रेवरून आला आहे.", ...gq(5) },
+
+  // July 2025
+  { date:"2025-07-06", tithi:"Ekadashi", tithiMr:"एकादशी", nakshatra:"Uttara Ashadha", nakshtraMr:"उत्तराषाढा", vaar:"Sunday", vaarMr:"रविवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ashadhi Ekadashi", festivalMr:"आषाढी एकादशी", festivalType:"major", category:"marathi", isHoliday:true, isVrat:true, mainEvent:"Ashadhi Ekadashi (Vitthal Ekadashi)", mainEventMr:"आषाढी एकादशी (विठ्ठल एकादशी)", mainEventDesc:"The grand Wari pilgrimage to Pandharpur — lakhs of Varkaris walk to seek blessings of Lord Vitthal.", mainEventDescMr:"पंढरपूरला भव्य वारी यात्रा — लाखो वारकरी भगवान विठ्ठलाचे आशीर्वाद घेण्यासाठी चालत येतात.", indianSignificance:["Ashadhi Ekadashi — Vitthal Wari","Grand pilgrimage to Pandharpur","Ashadha Shukla Ekadashi"], indianSignificanceMr:["आषाढी एकादशी — विठ्ठल वारी","पंढरपूरला भव्य यात्रा","आषाढ शुक्ल एकादशी"], vrat:"Ashadhi Ekadashi Vrat", vratMr:"आषाढी एकादशी व्रत", historyFact:"The Pandharpur Wari pilgrimage is 700+ years old, started by the great Bhakti saint Sant Dnyaneshwar.", historyFactMr:"पंढरपूर वारी ७०० वर्षांहून जुनी आहे. संत ज्ञानेश्वरांनी सुरू केली.", didYouKnow:"Over 1 million Varkaris walk to Pandharpur for Ashadhi Ekadashi — one of the world's largest pilgrimages.", didYouKnowMr:"आषाढी एकादशीला १० लाखांहून अधिक वारकरी पंढरपूरला पायी जातात — जगातील सर्वात मोठ्या तीर्थयात्रांपैकी एक.", ...gq(13) },
+  { date:"2025-07-10", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Shravana", nakshtraMr:"श्रवण", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Guru Purnima", festivalMr:"गुरुपौर्णिमा", festivalType:"major", category:"hindu", isVrat:true, mainEvent:"Guru Purnima", mainEventMr:"गुरुपौर्णिमा", mainEventDesc:"Tribute to spiritual and academic teachers — celebrated on the full moon of Ashadha month.", mainEventDescMr:"आध्यात्मिक आणि शैक्षणिक गुरूंना आदरांजली — आषाढ महिन्याच्या पौर्णिमेला साजरे.", indianSignificance:["Guru Purnima — Ashadha Purnima","Vyas Purnima — Birthday of Sage Veda Vyasa"], indianSignificanceMr:["गुरुपौर्णिमा — आषाढ पौर्णिमा","व्यास पौर्णिमा — वेद व्यासांची जयंती"], historyFact:"Sage Veda Vyasa, compiler of the Vedas and author of Mahabharata, was born on this day.", historyFactMr:"वेद व्यास — वेदांचे संकलक आणि महाभारताचे लेखक — यांचा जन्म या दिवशी झाला.", didYouKnow:"'Guru' in Sanskrit literally means 'one who dispels darkness (ignorance) and brings light (knowledge)'.", didYouKnowMr:"संस्कृतमध्ये 'गुरू' म्हणजे 'अंधार (अज्ञान) दूर करणारा आणि प्रकाश (ज्ञान) आणणारा'.", ...gq(1) },
+
+  // August 2025
+  { date:"2025-08-01", tithi:"Panchami", tithiMr:"पंचमी", nakshatra:"Dhanishtha", nakshtraMr:"धनिष्ठा", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Nag Panchami", festivalMr:"नागपंचमी", festivalType:"major", category:"hindu", isVrat:true, mainEvent:"Nag Panchami", mainEventMr:"नागपंचमी", mainEventDesc:"Worship of serpent deities (Nagas) — milk is offered at snake temples and ant-hills.", mainEventDescMr:"नाग देवतांची पूजा — सर्पमंदिरे आणि वारुळांवर दूध अर्पण केले जाते.", indianSignificance:["Nag Panchami — Shravana Shukla 5th","Worship of Nagas (serpent gods)","Tithi • Panchami Shukla Paksha"], indianSignificanceMr:["नागपंचमी — श्रावण शुक्ल पंचमी","नाग देवतांची पूजा","तिथी • शुक्ल पक्ष पंचमी"], vrat:"Nag Panchami Vrat", vratMr:"नागपंचमी व्रत", historyFact:"Nag worship in India predates Hinduism — serpent idols from 3,000+ years ago have been found at Harappan sites.", historyFactMr:"भारतात नागपूजा हिंदू धर्माच्या आधीपासून आहे — हडप्पा स्थळांवर ३,०००+ वर्षे जुन्या नागमूर्ती सापडल्या आहेत.", didYouKnow:"India has 270+ species of snakes, of which 60 are venomous. The Cobra (Nag) is venerated as divine.", didYouKnowMr:"भारतात २७०+ सापांच्या प्रजाती आहेत, त्यापैकी ६० विषारी आहेत. कोब्रा (नाग) दैवी मानला जातो.", ...gq(3) },
+  { date:"2025-08-09", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Shravana", nakshtraMr:"श्रवण", vaar:"Saturday", vaarMr:"शनिवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Raksha Bandhan", festivalMr:"रक्षाबंधन", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Raksha Bandhan", mainEventMr:"रक्षाबंधन", mainEventDesc:"Festival celebrating the bond between brothers and sisters — sisters tie a rakhi (sacred thread) on their brother's wrist.", mainEventDescMr:"भाऊ-बहिणीचे नाते साजरे करणारा सण — बहिणी भावाच्या मनगटावर राखी (पवित्र धागा) बांधतात.", indianSignificance:["Raksha Bandhan — Shravana Purnima","Bond of protection between siblings"], indianSignificanceMr:["रक्षाबंधन — श्रावण पौर्णिमा","भाऊ-बहिणींचे संरक्षणाचे बंधन"], historyFact:"1947: During Partition, Hindus and Muslims exchanged rakhis as a symbol of brotherhood.", historyFactMr:"१९४७: फाळणीच्या वेळी, हिंदू आणि मुस्लिम बंधुत्वाचे प्रतीक म्हणून राख्या बांधत.", didYouKnow:"Queen Karnavati sent a rakhi to Emperor Humayun asking for help, cementing a historical bond.", didYouKnowMr:"राणी कर्णावतीने सम्राट हुमायूनला मदत मागण्यासाठी राखी पाठवली — एक ऐतिहासिक बंधन.", ...gq(0) },
+  { date:"2025-08-16", tithi:"Ashtami", tithiMr:"अष्टमी", nakshatra:"Rohini", nakshtraMr:"रोहिणी", vaar:"Saturday", vaarMr:"शनिवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Janmashtami", festivalMr:"जन्माष्टमी", festivalType:"major", category:"hindu", isHoliday:true, isVrat:true, mainEvent:"Janmashtami (Krishna Jayanti)", mainEventMr:"जन्माष्टमी (कृष्ण जयंती)", mainEventDesc:"Birthday of Lord Krishna — celebrated at midnight with prayers, bhajans and Dahi Handi.", mainEventDescMr:"भगवान श्रीकृष्णाची जयंती — मध्यरात्री प्रार्थना, भजन आणि दही हंडीसह साजरे.", indianSignificance:["Janmashtami — Krishna's Birthday","Bhadrapada Krishna Ashtami","Dahi Handi celebration"], indianSignificanceMr:["जन्माष्टमी — कृष्णाचा जन्मदिन","भाद्रपद कृष्ण अष्टमी","दही हंडी उत्सव"], vrat:"Janmashtami Vrat", vratMr:"जन्माष्टमी व्रत", historyFact:"Lord Krishna was born in Mathura prison at midnight. His life story is told in the Bhagavata Purana.", historyFactMr:"भगवान श्रीकृष्ण मथुरेच्या तुरुंगात मध्यरात्री जन्मले. त्यांची कथा भागवत पुराणात सांगितली आहे.", didYouKnow:"Bhagavad Gita, spoken by Krishna on the battlefield, is one of the most translated books in history.", didYouKnowMr:"भगावद्गीता, युद्धभूमीवर कृष्णाने सांगितली, ही इतिहासातील सर्वाधिक अनुवादित पुस्तकांपैकी एक आहे.", ...gq(10) },
+  { date:"2025-08-27", tithi:"Chaturthi", tithiMr:"चतुर्थी", nakshatra:"Hasta", nakshtraMr:"हस्त", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ganesh Chaturthi", festivalMr:"गणेश चतुर्थी", festivalType:"major", category:"marathi", isHoliday:true, mainEvent:"Ganesh Chaturthi", mainEventMr:"गणेश चतुर्थी", mainEventDesc:"10-day festival celebrating the birth of Lord Ganesha — the remover of obstacles, first among all gods.", mainEventDescMr:"भगवान गणेशाच्या जन्माचा १०-दिवसीय उत्सव — विघ्नहर्ता, सर्व देवांमध्ये प्रथम.", indianSignificance:["Ganesh Chaturthi — Bhadrapada Shukla 4th","10-day festival begins","Tithi • Chaturthi Shukla Paksha"], indianSignificanceMr:["गणेश चतुर्थी — भाद्रपद शुक्ल चतुर्थी","१०-दिवसीय उत्सव सुरू","तिथी • शुक्ल पक्ष चतुर्थी"], historyFact:"1893: Lokmanya Bal Gangadhar Tilak transformed Ganesh Chaturthi into a public festival to unite people.", historyFactMr:"१८९३: लोकमान्य टिळकांनी गणेश चतुर्थीला सार्वजनिक उत्सवात रूपांतरित केले — लोकांना एकत्र आणण्यासाठी.", didYouKnow:"Mumbai's Ganesh Chaturthi festival is one of the world's largest public gatherings — 12+ million attendees.", didYouKnowMr:"मुंबईचा गणेशोत्सव जगातील सर्वात मोठ्या सार्वजनिक सोहळ्यांपैकी एक — १.२ कोटी+ उपस्थित.", ...gq(9) },
+  { date:"2025-09-05", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Uttara Phalguni", nakshtraMr:"उत्तराफाल्गुनी", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ananta Chaturdashi (Ganesh Visarjan)", festivalMr:"अनंत चतुर्दशी (गणेश विसर्जन)", festivalType:"major", category:"marathi", isHoliday:true, mainEvent:"Ganesh Visarjan", mainEventMr:"गणेश विसर्जन", mainEventDesc:"Grand immersion of Ganesh idols on the 10th day of Ganesh Chaturthi — 'Ganpati Bappa Morya!'", mainEventDescMr:"गणेश चतुर्थीच्या १०व्या दिवशी भव्य गणेश विसर्जन — 'गणपती बाप्पा मोरया!'", indianSignificance:["Ananta Chaturdashi — Bhadrapada Shukla 14th","Grand Ganesh Visarjan processions"], indianSignificanceMr:["अनंत चतुर्दशी — भाद्रपद शुक्ल चतुर्दशी","भव्य गणेश विसर्जन मिरवणूक"], historyFact:"Mumbai's Ganesh Chaturthi was transformed by Lokmanya Tilak in 1893 — the first public Ganeshotsav.", historyFactMr:"१८९३ मध्ये लोकमान्य टिळकांनी मुंबईत पहिला सार्वजनिक गणेशोत्सव सुरू केला.", didYouKnow:"'Ganpati Bappa Morya, Pudchya Varshi Laukar Ya' means 'Lord Ganesha, come back soon next year!'", didYouKnowMr:"'गणपती बाप्पा मोरया, पुढच्या वर्षी लवकर या' — पुढील वर्षी लवकर परत ये असे सांगतो.", ...gq(6) },
+
+  // October 2025
+  { date:"2025-10-02", tithi:"Pratipada", tithiMr:"प्रतिपदा", nakshatra:"Uttara Phalguni", nakshtraMr:"उत्तराफाल्गुनी", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Gandhi Jayanti & Navratri Day 1", festivalMr:"गांधी जयंती व नवरात्री प्रारंभ", festivalType:"holiday", category:"national", isHoliday:true, mainEvent:"Gandhi Jayanti & Navratri Begin", mainEventMr:"गांधी जयंती व नवरात्री प्रारंभ", mainEventDesc:"Birthday of Mahatma Gandhi. Navratri also begins today — 9 nights of Goddess Durga worship.", mainEventDescMr:"महात्मा गांधींची जयंती. नवरात्री आजपासून सुरू — देवी दुर्गेची ९ रात्री उपासना.", indianSignificance:["Gandhi Jayanti — National Holiday","Navratri Day 1 — Ashwin Shukla Pratipada","Shardiya Navratri begins"], indianSignificanceMr:["गांधी जयंती — राष्ट्रीय सुट्टी","नवरात्री दिवस १ — आश्विन शुक्ल प्रतिपदा","शारदीय नवरात्री प्रारंभ"], historyFact:"1869: Mahatma Gandhi was born. 2007: The UN declared Oct 2 as International Day of Non-Violence.", historyFactMr:"१८६९: महात्मा गांधींचा जन्म. २००७: संयुक्त राष्ट्रांनी २ ऑक्टोबरला आंतरराष्ट्रीय अहिंसा दिन घोषित केला.", didYouKnow:"Gandhi's autobiography 'My Experiments with Truth' has been translated into 100+ languages.", didYouKnowMr:"गांधींचे आत्मचरित्र 'माझे सत्याचे प्रयोग' १०० हून अधिक भाषांमध्ये अनुवादित झाले आहे.", ...gq(11) },
+  { date:"2025-10-07", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Ashwini", nakshtraMr:"अश्विनी", vaar:"Tuesday", vaarMr:"मंगळवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Kojagiri Pournima", festivalMr:"कोजागिरी पौर्णिमा", festivalType:"major", category:"marathi", mainEvent:"Kojagiri Pournima", mainEventMr:"कोजागिरी पौर्णिमा", mainEventDesc:"Ashwin full moon night — Goddess Lakshmi is said to descend and bless those who stay awake.", mainEventDescMr:"आश्विन पौर्णिमेची रात्र — देवी लक्ष्मी उतरून जागे राहणाऱ्यांना आशीर्वाद देते असे म्हटले जाते.", indianSignificance:["Kojagiri Pournima — Ashwin Purnima","Goddess Lakshmi worship on full moon night","Night vigil tradition"], indianSignificanceMr:["कोजागिरी पौर्णिमा — आश्विन पौर्णिमा","पौर्णिमेच्या रात्री देवी लक्ष्मीची पूजा","रात्र जागण्याची परंपरा"], historyFact:"Kojagiri is celebrated across Maharashtra with families drinking spiced milk under the moonlight.", historyFactMr:"कोजागिरी महाराष्ट्रभर साजरी होते — कुटुंबे चंद्रप्रकाशात मसालेदार दूध पितात.", didYouKnow:"The word 'Kojagiri' comes from 'Ko Jagarti?' meaning 'Who is awake?' — Lakshmi blesses the wakeful.", didYouKnowMr:"'कोजागिरी' शब्द 'को जागर्ति?' म्हणजे 'कोण जागे आहे?' यावरून आला — लक्ष्मी जागणाऱ्यांना आशीर्वाद देते.", ...gq(4) },
+  { date:"2025-10-12", tithi:"Dashami", tithiMr:"दशमी", nakshatra:"Hasta", nakshtraMr:"हस्त", vaar:"Sunday", vaarMr:"रविवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Dussehra (Vijayadashami)", festivalMr:"दसरा (विजयादशमी)", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Dussehra — Vijayadashami", mainEventMr:"दसरा — विजयादशमी", mainEventDesc:"Celebration of Rama's victory over Ravana and Durga's victory over Mahishasura — triumph of good over evil.", mainEventDescMr:"रामाचा रावणावर आणि दुर्गेचा महिषासुरावर विजय — चांगल्याचा वाईटावरील विजय.", indianSignificance:["Dussehra — Ashwin Shukla Dashami","Effigy burning of Ravana","Navratri's 10th day"], indianSignificanceMr:["दसरा — आश्विन शुक्ल दशमी","रावण दहन","नवरात्रीचा १०वा दिवस"], historyFact:"Ravan Dahan (burning of Ravana's effigy) symbolizes the destruction of the 10 vices.", historyFactMr:"रावण दहन (रावणाचा पुतळा जाळणे) १० दुर्गुणांच्या नाशाचे प्रतीक आहे.", didYouKnow:"Mysore Dussehra is one of the most spectacular celebrations — a 10-day royal procession.", didYouKnowMr:"म्हैसूरचा दसरा सर्वात भव्य उत्सवांपैकी एक आहे — १०-दिवसीय राजेशाही मिरवणूक.", ...gq(7) },
+  { date:"2025-10-18", tithi:"Trayodashi", tithiMr:"त्रयोदशी", nakshatra:"Purva Phalguni", nakshtraMr:"पूर्वाफाल्गुनी", vaar:"Saturday", vaarMr:"शनिवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Dhanteras", festivalMr:"धनत्रयोदशी", festivalType:"major", category:"hindu", mainEvent:"Dhanteras (Dhanvantari Jayanti)", mainEventMr:"धनत्रयोदशी (धन्वंतरी जयंती)", mainEventDesc:"First day of Diwali — worship of Lord Dhanvantari (god of Ayurveda) and Goddess Lakshmi. Auspicious for gold/silver purchases.", mainEventDescMr:"दिवाळीचा पहिला दिवस — धन्वंतरी (आयुर्वेदाचा देव) आणि देवी लक्ष्मीची पूजा. सोने-चांदी खरेदीसाठी शुभ.", indianSignificance:["Dhanteras — Kartik Krishna Trayodashi","Diwali festival begins","Gold & silver purchase tradition"], indianSignificanceMr:["धनत्रयोदशी — कार्तिक कृष्ण त्रयोदशी","दिवाळी उत्सव सुरू","सोने-चांदी खरेदीची परंपरा"], historyFact:"Dhanvantari, the physician of the gods, emerged from the ocean during the cosmic churning with a pot of Amrit.", historyFactMr:"धन्वंतरी, देवांचे वैद्य, समुद्रमंथनातून अमृत कलशासह उदयास आले.", didYouKnow:"India buys the most gold in the world during Dhanteras — making it one of the biggest gold-buying events globally.", didYouKnowMr:"धनत्रयोदशीला भारत जगातील सर्वाधिक सोने खरेदी करतो — हे जगातील सर्वात मोठ्या सोने खरेदी कार्यक्रमांपैकी एक.", ...gq(2) },
+  { date:"2025-10-20", tithi:"Amavasya", tithiMr:"अमावस्या", nakshatra:"Swati", nakshtraMr:"स्वाती", vaar:"Monday", vaarMr:"सोमवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Diwali (Lakshmi Puja)", festivalMr:"दिवाळी (लक्ष्मी पूजा)", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Diwali — Festival of Lights", mainEventMr:"दिवाळी — दिव्यांचा सण", mainEventDesc:"The grandest Hindu festival — celebrating the victory of light over darkness with lamps, sweets, and fireworks.", mainEventDescMr:"हिंदूंचा सर्वात मोठा सण — दिवे, मिठाई आणि फटाक्यांनी प्रकाशाचा अंधारावर विजय साजरा.", indianSignificance:["Diwali — Lakshmi Puja (Main Day)","Kartik Amavasya — New Moon night","Tithi • Amavasya Krishna Paksha"], indianSignificanceMr:["दिवाळी — लक्ष्मी पूजा (मुख्य दिवस)","कार्तिक अमावस्या — नवचंद्राची रात्र","तिथी • कृष्ण पक्ष अमावस्या"], vrat:"Lakshmi Puja Vrat", vratMr:"लक्ष्मी पूजा व्रत", historyFact:"Diwali celebrates Rama's return to Ayodhya after 14 years of exile and victory over Ravana.", historyFactMr:"राम १४ वर्षांच्या वनवासानंतर आणि रावणावर विजयानंतर अयोध्येला परत आला त्याचा उत्सव म्हणजे दिवाळी.", didYouKnow:"India lights up with billions of diyas (oil lamps) on Diwali night — visible even from space!", didYouKnowMr:"दिवाळीच्या रात्री भारतात अब्जावधी दिवे लागतात — अंतराळातूनही दिसतात!", ...gq(13) },
+  { date:"2025-10-22", tithi:"Dwitiya", tithiMr:"द्वितीया", nakshatra:"Anuradha", nakshtraMr:"अनुराधा", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Govardhan Puja (Diwali Day 4)", festivalMr:"गोवर्धन पूजा (दिवाळी चौथा दिवस)", festivalType:"major", category:"hindu", mainEvent:"Govardhan Puja", mainEventMr:"गोवर्धन पूजा", mainEventDesc:"Celebration of Krishna lifting Govardhan mountain to protect villagers from Indra's wrath.", mainEventDescMr:"इंद्राच्या रोषापासून गावकऱ्यांचे संरक्षण करण्यासाठी कृष्णाने गोवर्धन पर्वत उचलल्याचा उत्सव.", indianSignificance:["Govardhan Puja — Kartik Shukla Pratipada","Diwali 4th day — Annakut"], indianSignificanceMr:["गोवर्धन पूजा — कार्तिक शुक्ल प्रतिपदा","दिवाळी चौथा दिवस — अन्नकूट"], historyFact:"In Mathura and Vrindavan, 'Annakut' (mountain of food) is offered to Krishna on this day.", historyFactMr:"मथुरा आणि वृंदावनमध्ये या दिवशी कृष्णाला 'अन्नकूट' (अन्नाचा ढीग) अर्पण केला जातो.", didYouKnow:"Govardhan Hill in Mathura, UP is worshipped as the physical form of Lord Krishna.", didYouKnowMr:"मथुरा, उत्तर प्रदेशातील गोवर्धन टेकडी भगवान श्रीकृष्णाचे भौतिक रूप म्हणून पूजली जाते.", ...gq(8) },
+  { date:"2025-10-23", tithi:"Tritiya", tithiMr:"तृतीया", nakshatra:"Jyeshtha", nakshtraMr:"ज्येष्ठा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Bhau Beej (Bhai Dooj)", festivalMr:"भाऊबीज", festivalType:"major", category:"marathi", mainEvent:"Bhau Beej", mainEventMr:"भाऊबीज", mainEventDesc:"Sisters pray for their brothers' long life, applying tilak and sharing sweets — last day of Diwali.", mainEventDescMr:"बहिणी भावाच्या दीर्घायुष्यासाठी प्रार्थना करतात, टिळक लावतात आणि मिठाई वाटतात — दिवाळीचा शेवटचा दिवस.", indianSignificance:["Bhau Beej — Kartik Shukla Dwitiya","Diwali 5th and final day","Sisters pray for brothers' long life"], indianSignificanceMr:["भाऊबीज — कार्तिक शुक्ल द्वितीया","दिवाळीचा पाचवा व शेवटचा दिवस","बहिणी भावाच्या दीर्घायुष्यासाठी प्रार्थना"], historyFact:"According to legend, Yama (god of death) visited his sister Yamuna on this day — hence Yama Dwitiya.", historyFactMr:"पौराणिक कथेनुसार यम (मृत्युदेव) या दिवशी आपली बहीण यमुनेला भेटला — म्हणूनच यम द्वितीया.", didYouKnow:"Bhau Beej is called 'Bhai Dooj' in North India and 'Bhai Phota' in West Bengal.", didYouKnowMr:"भाऊबीजला उत्तर भारतात 'भाई दूज' आणि पश्चिम बंगालमध्ये 'भाई फोटा' म्हणतात.", ...gq(6) },
+
+  // November 2025
+  { date:"2025-11-05", tithi:"Ekadashi", tithiMr:"एकादशी", nakshatra:"Purva Bhadrapada", nakshtraMr:"पूर्वाभाद्रपदा", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Guru Nanak Jayanti & Dev Uthani Ekadashi", festivalMr:"गुरु नानक जयंती व देव उठनी एकादशी", festivalType:"major", category:"other", isHoliday:true, isVrat:true, mainEvent:"Guru Nanak Jayanti", mainEventMr:"गुरु नानक जयंती", mainEventDesc:"Birthday of Guru Nanak Dev Ji, the founder of Sikhism — celebrated with prayers and langar (community meal).", mainEventDescMr:"शीख धर्माचे संस्थापक गुरु नानक देव जी यांची जयंती — प्रार्थना आणि लंगर (सामुदायिक जेवण) सह साजरे.", indianSignificance:["Guru Nanak Jayanti — National Holiday","Dev Uthani Ekadashi — Kartik Shukla 11th","Vishnu awakens from cosmic sleep"], indianSignificanceMr:["गुरु नानक जयंती — राष्ट्रीय सुट्टी","देव उठनी एकादशी — कार्तिक शुक्ल ११वी","विष्णू कोस्मिक झोपेतून जागे होतात"], vrat:"Dev Uthani Ekadashi", vratMr:"देव उठनी एकादशी", historyFact:"1469: Guru Nanak Dev Ji was born in Nankana Sahib (now in Pakistan). He traveled 28,000 km spreading his message.", historyFactMr:"१४६९: गुरु नानक देव जी नानकाना साहिब (आता पाकिस्तान) येथे जन्मले. त्यांनी संदेश पसरवण्यासाठी २८,००० किमी प्रवास केला.", didYouKnow:"'Ik Onkar' (One God) is the most fundamental teaching of Guru Nanak — unity of all creation.", didYouKnowMr:"'इक ओंकार' (एक ईश्वर) हे गुरु नानकांचे सर्वात मूलभूत तत्त्व आहे — सर्व सृष्टीची एकता.", ...gq(0) },
+  { date:"2025-11-12", tithi:"Dwitiya", tithiMr:"द्वितीया", nakshatra:"Anuradha", nakshtraMr:"अनुराधा", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Tulsi Vivah", festivalMr:"तुळशी विवाह", festivalType:"major", category:"hindu", isVrat:true, mainEvent:"Tulsi Vivah", mainEventMr:"तुळशी विवाह", mainEventDesc:"The symbolic marriage of Tulsi (Holy Basil) plant with Lord Vishnu — marks the beginning of the Hindu wedding season.", mainEventDescMr:"तुळस (पवित्र बेसिल) वनस्पती आणि भगवान विष्णू यांचा प्रतीकात्मक विवाह — हिंदू विवाह हंगामाची सुरुवात.", indianSignificance:["Tulsi Vivah — Kartik Shukla Dwitiya","Beginning of Hindu wedding season","Vishnu-Tulsi symbolic marriage"], indianSignificanceMr:["तुळशी विवाह — कार्तिक शुक्ल द्वितीया","हिंदू विवाह हंगामाची सुरुवात","विष्णू-तुळशीचा प्रतीकात्मक विवाह"], historyFact:"Tulsi (Holy Basil) is considered the most sacred plant in Hinduism — it has 100+ medicinal uses.", historyFactMr:"तुळस हिंदू धर्मातील सर्वात पवित्र वनस्पती मानली जाते — तिचे १०० हून अधिक औषधी उपयोग आहेत.", didYouKnow:"Tulsi has been proven to reduce stress and anxiety — ancient Indians knew this thousands of years ago.", didYouKnowMr:"तुळस तणाव आणि चिंता कमी करते — प्राचीन भारतीयांना हजारो वर्षांपूर्वी हे माहीत होते.", ...gq(1) },
+
+  // ═══════ 2026 ═══════
+  // January 2026
+  { date:"2026-01-14", tithi:"Pratipada", tithiMr:"प्रतिपदा", nakshatra:"Uttara Ashadha", nakshtraMr:"उत्तराषाढा", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Makar Sankranti", festivalMr:"मकर संक्रांती", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Makar Sankranti 2026", mainEventMr:"मकर संक्रांती २०२६", mainEventDesc:"Sun's transition into Capricorn — sesame sweets, kite flying, harvest thanksgiving.", mainEventDescMr:"सूर्याचे मकर राशीत प्रवेश — तीळगूळ, पतंगबाजी, कापणीचे आभार.", indianSignificance:["Makar Sankranti","Uttarayan (sun's northern journey)","Harvest festival"], indianSignificanceMr:["मकर संक्रांती","उत्तरायण (सूर्याचा उत्तर प्रवास)","कापणी उत्सव"], historyFact:"Makar Sankranti is one of the few Hindu festivals that follows the solar calendar — always falls on Jan 14.", historyFactMr:"मकर संक्रांती हे काही हिंदू सणांपैकी एक आहे जे सौर दिनदर्शिका पाळते — नेहमी जानेवारी १४ रोजी.", didYouKnow:"In Gujarat, the sky fills with millions of kites on Makar Sankranti — Uttarayan is a 2-day festival.", didYouKnowMr:"गुजरातमध्ये मकर संक्रांतीला आकाश लाखो पतंगांनी भरते — उत्तरायण २-दिवसीय सण आहे.", ...gq(5) },
+
+  // February 2026
+  { date:"2026-02-15", tithi:"Chaturdashi", tithiMr:"चतुर्दशी", nakshatra:"Shatabhisha", nakshtraMr:"शतभिषा", vaar:"Sunday", vaarMr:"रविवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Maha Shivratri", festivalMr:"महाशिवरात्री", festivalType:"major", category:"hindu", isHoliday:true, isVrat:true, mainEvent:"Maha Shivratri 2026", mainEventMr:"महाशिवरात्री २०२६", mainEventDesc:"The great night of Lord Shiva — all-night vigil with bhajans, fasting, and Shiva puja.", mainEventDescMr:"भगवान शिवाची महान रात्र — भजन, उपवास आणि शिव पूजेसह रात्रभर जागरण.", indianSignificance:["Maha Shivratri — Magha Krishna Chaturdashi","All-night puja and fasting"], indianSignificanceMr:["महाशिवरात्री — माघ कृष्ण चतुर्दशी","रात्रभर पूजा आणि उपवास"], vrat:"Maha Shivratri Vrat", vratMr:"महाशिवरात्री व्रत", historyFact:"Shiva's cosmic dance (Tandava) represents the cycle of creation, preservation and destruction.", historyFactMr:"शिवाचे तांडव नृत्य सृष्टी, पालन आणि संहाराचे चक्र दर्शवते.", didYouKnow:"There are 12 Jyotirlingas (sacred Shiva shrines) in India — visiting all 12 is a lifetime pilgrimage.", didYouKnowMr:"भारतात १२ ज्योतिर्लिंग (पवित्र शिव मंदिरे) आहेत — सर्व १२ ला भेट देणे हे जीवनकालातील तीर्थयात्रा आहे.", ...gq(3) },
+
+  // March 2026
+  { date:"2026-03-04", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Hasta", nakshtraMr:"हस्त", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Holi", festivalMr:"होळी", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Holi 2026", mainEventMr:"होळी २०२६", mainEventDesc:"Festival of colours — Phalguna Purnima celebrates spring and triumph of good over evil.", mainEventDescMr:"रंगांचा सण — फाल्गुन पौर्णिमा वसंत ऋतू आणि चांगल्याचा वाईटावरील विजय साजरा करते.", indianSignificance:["Holi — Phalguna Purnima","Festival of colours and spring"], indianSignificanceMr:["होळी — फाल्गुन पौर्णिमा","रंग आणि वसंताचा सण"], historyFact:"The tradition of playing with colours on Holi dates back 2,500+ years — mentioned in ancient Sanskrit texts.", historyFactMr:"होळीवर रंगांशी खेळण्याची परंपरा २,५०० वर्षांहून जुनी आहे — प्राचीन संस्कृत ग्रंथांमध्ये उल्लेख.", didYouKnow:"Herbal colours used traditionally for Holi were actually medicinal — made from flowers like Tesu and Palash.", didYouKnowMr:"होळीसाठी पारंपारिकपणे वापरलेले हर्बल रंग खरे तर औषधी होते — टेसू आणि पळस फुलांपासून बनवले.", ...gq(12) },
+  { date:"2026-03-19", tithi:"Pratipada", tithiMr:"प्रतिपदा", nakshatra:"Uttara Bhadrapada", nakshtraMr:"उत्तराभाद्रपदा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Gudi Padwa", festivalMr:"गुडी पाडवा", festivalType:"major", category:"marathi", isHoliday:true, mainEvent:"Gudi Padwa — Marathi New Year 2026", mainEventMr:"गुडी पाडवा — मराठी नवीन वर्ष २०२६", mainEventDesc:"Maharashtrian New Year — homes are decorated, Gudi is hoisted, families pray for prosperity.", mainEventDescMr:"महाराष्ट्रीय नवीन वर्ष — घरे सजवली जातात, गुडी उभारली जाते, कुटुंब समृद्धीसाठी प्रार्थना करते.", indianSignificance:["Gudi Padwa — Marathi New Year","Chaitra Shukla Pratipada","Ugadi (Telugu/Kannada New Year)"], indianSignificanceMr:["गुडी पाडवा — मराठी नवीन वर्ष","चैत्र शुक्ल प्रतिपदा","उगादी (तेलुगु/कन्नड नवीन वर्ष)"], historyFact:"Gudi Padwa marks the beginning of the Shalivahana Shaka calendar, which started in 78 CE.", historyFactMr:"गुडी पाडवा शालिवाहन शक दिनदर्शिकेची सुरुवात दर्शवतो, जो इ.स. ७८ मध्ये सुरू झाला.", didYouKnow:"On Gudi Padwa, Maharashtrians eat 'Soonth Pachadi' — a dish combining six tastes (bitter, sweet, sour, salty, spicy, astringent).", didYouKnowMr:"गुडी पाडव्याला महाराष्ट्रीय 'सुंठ पचडी' खातात — सहा चव (कडू, गोड, आंबट, खारट, तिखट, तुरट) असलेला पदार्थ.", ...gq(9) },
+  { date:"2026-03-28", tithi:"Navami", tithiMr:"नवमी", nakshatra:"Punarvasu", nakshtraMr:"पुनर्वसु", vaar:"Saturday", vaarMr:"शनिवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ram Navami", festivalMr:"रामनवमी", festivalType:"major", category:"hindu", isHoliday:true, isVrat:true, mainEvent:"Ram Navami 2026", mainEventMr:"रामनवमी २०२६", mainEventDesc:"Birthday of Lord Rama — prayers, bhajans, Ramayana recitation across the country.", mainEventDescMr:"भगवान रामाची जयंती — देशभर प्रार्थना, भजन, रामायण वाचन.", indianSignificance:["Ram Navami — Chaitra Shukla Navami","Tithi • Navami Shukla Paksha"], indianSignificanceMr:["रामनवमी — चैत्र शुक्ल नवमी","तिथी • शुक्ल पक्ष नवमी"], vrat:"Ram Navami Vrat", vratMr:"रामनवमी व्रत", historyFact:"Ayodhya, the birthplace of Ram, is located in Uttar Pradesh. The Ram Mandir was inaugurated in 2024.", historyFactMr:"राम जन्मभूमी अयोध्या उत्तर प्रदेशात आहे. रामललाचे मंदिर २०२४ मध्ये उद्घाटन झाले.", didYouKnow:"The Ramayana teaches the ideals of family values, righteousness, and sacrifice through Ram's journey.", didYouKnowMr:"रामायण रामाच्या प्रवासातून कौटुंबिक मूल्ये, धार्मिकता आणि बलिदान यांचे आदर्श शिकवते.", ...gq(11) },
+
+  // April 2026
+  { date:"2026-04-02", tithi:"Purnima", tithiMr:"पौर्णिमा", nakshatra:"Chitra", nakshtraMr:"चित्रा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Hanuman Jayanti", festivalMr:"हनुमान जयंती", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Hanuman Jayanti 2026", mainEventMr:"हनुमान जयंती २०२६", mainEventDesc:"Birthday of Lord Hanuman — worship with vermilion, sweets and Hanuman Chalisa recitation.", mainEventDescMr:"हनुमानाची जयंती — सिंदूर, मिठाई आणि हनुमान चालीसा पठणाने पूजा.", indianSignificance:["Hanuman Jayanti — Chaitra Purnima","Tithi • Purnima Shukla Paksha"], indianSignificanceMr:["हनुमान जयंती — चैत्र पौर्णिमा","तिथी • शुक्ल पक्ष पौर्णिमा"], historyFact:"Hanuman is the central figure in the Ramayana — his devotion to Rama is unparalleled.", historyFactMr:"हनुमान रामायणातील मध्यवर्ती पात्र आहे — राम भक्तीमध्ये त्याची तुलना होत नाही.", didYouKnow:"Hanuman is said to be immortal — one of the Chiranjivis (immortal beings) in Hindu mythology.", didYouKnowMr:"हनुमान अमर असल्याचे सांगितले जाते — हिंदू पुराणातील चिरंजीवींपैकी एक.", ...gq(7) },
+  { date:"2026-04-16", tithi:"Panchami", tithiMr:"पंचमी", nakshatra:"Ardra", nakshtraMr:"आर्द्रा", vaar:"Thursday", vaarMr:"गुरुवार", paksha:"Shukla", pakshaMr:"शुक्ल", mainEvent:"World Voice Day", mainEventMr:"जागतिक आवाज दिन", mainEventDesc:"Celebrating the phenomenon of voice and raising awareness about voice disorders.", mainEventDescMr:"आवाजाची घटना साजरी करणे आणि आवाजाच्या विकारांबद्दल जागरुकता वाढवणे.", indianSignificance:["Indian Railways Day (1853 — first train ran)", "Tithi • Panchami Shukla Paksha"], indianSignificanceMr:["भारतीय रेल्वे दिन (१८५३ — पहिली गाडी धावली)", "तिथी • शुक्ल पक्ष पंचमी"], globalObservance:"World Voice Day", globalObservanceMr:"जागतिक आवाज दिन", historyFact:"1853: India's first passenger train ran between Bori Bunder (CST) and Thane, covering 34 km in 1 hour 15 min.", historyFactMr:"१८५३: भारतातील पहिली प्रवासी रेल्वे बोरी बंदर (CST) ते ठाणे, ३४ कि.मी. — १ तास १५ मिनिटात.", didYouKnow:"Indian Railways is the world's 4th largest railway network — 67,000+ km of track.", didYouKnowMr:"भारतीय रेल्वे जगातील चौथे सर्वात मोठे रेल्वे जाळे आहे — ६७,०००+ कि.मी. ट्रॅक.", ...gq(7) },
+  { date:"2026-04-17", tithi:"Shashthi", tithiMr:"षष्ठी", nakshatra:"Punarvasu", nakshtraMr:"पुनर्वसु", vaar:"Friday", vaarMr:"शुक्रवार", paksha:"Shukla", pakshaMr:"शुक्ल", globalObservance:"World Haemophilia Day", globalObservanceMr:"जागतिक हिमोफिलिया दिन", historyFact:"1524: Vasco da Gama arrived in India for the third time as Viceroy of Portuguese India.", historyFactMr:"१५२४: वास्को द गामा तिसऱ्यांदा पोर्तुगीज भारताचे व्हाइसरॉय म्हणून भारतात आले.", didYouKnow:"The lotus flower, India's national flower, blooms in muddy water — beauty rising from challenges.", didYouKnowMr:"कमळ, भारताचे राष्ट्रीय फूल, चिखलात फुलते — आव्हानांमधून सौंदर्य उदयास येते.", ...gq(0) },
+  { date:"2026-04-20", tithi:"Navami", tithiMr:"नवमी", nakshatra:"Pushya", nakshtraMr:"पुष्य", vaar:"Monday", vaarMr:"सोमवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Akshaya Tritiya", festivalMr:"अक्षय तृतीया", festivalType:"major", category:"hindu", isVrat:true, mainEvent:"Akshaya Tritiya 2026", mainEventMr:"अक्षय तृतीया २०२६", mainEventDesc:"Vaishakha Shukla Tritiya — the most auspicious day for new beginnings and gold purchases.", mainEventDescMr:"वैशाख शुक्ल तृतीया — नवीन सुरुवात आणि सोने खरेदीसाठी सर्वात शुभ दिवस.", indianSignificance:["Akshaya Tritiya — Vaishakha Shukla Tritiya"], indianSignificanceMr:["अक्षय तृतीया — वैशाख शुक्ल तृतीया"], historyFact:"Lord Parashurama's birthday also falls on Akshaya Tritiya — making it doubly auspicious.", historyFactMr:"भगवान परशुरामांचा जन्मदिवसही अक्षय तृतीयेला येतो — ते दुप्पट शुभ करते.", didYouKnow:"Gold gifted on Akshaya Tritiya is believed to bring lifelong prosperity — one of India's top gold-buying days.", didYouKnowMr:"अक्षय तृतीयेला दिलेले सोने जन्मभर समृद्धी आणते असे मानले जाते — भारतातील सोने खरेदीचे अव्वल दिवस.", ...gq(8) },
+
+  // August 2026
+  { date:"2026-08-19", tithi:"Chaturthi", tithiMr:"चतुर्थी", nakshatra:"Hasta", nakshtraMr:"हस्त", vaar:"Wednesday", vaarMr:"बुधवार", paksha:"Shukla", pakshaMr:"शुक्ल", festival:"Ganesh Chaturthi", festivalMr:"गणेश चतुर्थी", festivalType:"major", category:"marathi", isHoliday:true, mainEvent:"Ganesh Chaturthi 2026", mainEventMr:"गणेश चतुर्थी २०२६", mainEventDesc:"Bhadrapada Shukla Chaturthi — 10-day celebration of Lord Ganesha's birthday.", mainEventDescMr:"भाद्रपद शुक्ल चतुर्थी — भगवान गणेशाच्या जन्मोत्सवाचा १०-दिवसीय उत्सव.", indianSignificance:["Ganesh Chaturthi — Bhadrapada Shukla 4th","Ganesh Chaturthi 10-day festival begins"], indianSignificanceMr:["गणेश चतुर्थी — भाद्रपद शुक्ल चतुर्थी","गणेश चतुर्थी १०-दिवसीय उत्सव सुरू"], historyFact:"Maharashtra celebrates Ganesh Chaturthi as its biggest festival — 150,000+ Ganesh idols are installed in Mumbai alone.", historyFactMr:"महाराष्ट्र गणेश चतुर्थीला आपला सर्वात मोठा सण म्हणून साजरे करतो — मुंबईत एकट्यात १,५०,०००+ गणेशमूर्ती बसवल्या जातात.", didYouKnow:"Ganesha is worshipped at the beginning of any new venture — he is the remover of obstacles.", didYouKnowMr:"गणेशाची कोणत्याही नवीन उपक्रमाच्या सुरुवातीस पूजा केली जाते — तो विघ्नहर्ता आहे.", ...gq(9) },
+
+  // November 2026
+  { date:"2026-11-08", tithi:"Amavasya", tithiMr:"अमावस्या", nakshatra:"Swati", nakshtraMr:"स्वाती", vaar:"Sunday", vaarMr:"रविवार", paksha:"Krishna", pakshaMr:"कृष्ण", festival:"Diwali (Lakshmi Puja)", festivalMr:"दिवाळी (लक्ष्मी पूजा)", festivalType:"major", category:"hindu", isHoliday:true, mainEvent:"Diwali 2026", mainEventMr:"दिवाळी २०२६", mainEventDesc:"The festival of lights — Kartik Amavasya, the darkest night, lit up with millions of lamps.", mainEventDescMr:"दिव्यांचा सण — कार्तिक अमावस्या, सर्वात अंधारी रात्र, लाखो दिव्यांनी उजळते.", indianSignificance:["Diwali — Lakshmi Puja (Main Day)","Kartik Amavasya — New Moon"], indianSignificanceMr:["दिवाळी — लक्ष्मी पूजा (मुख्य दिवस)","कार्तिक अमावस्या — नवचंद्र"], vrat:"Lakshmi Puja Vrat", vratMr:"लक्ष्मी पूजा व्रत", historyFact:"Diwali is celebrated by 1+ billion people worldwide — Hindus, Sikhs, Jains and Buddhists.", historyFactMr:"दिवाळी जगभरात १+ अब्ज लोक साजरे करतात — हिंदू, शीख, जैन आणि बौद्ध.", didYouKnow:"Jains celebrate Diwali as the day Lord Mahavira attained Moksha (liberation).", didYouKnowMr:"जैन दिवाळी भगवान महावीरांनी मोक्ष प्राप्त केल्याचा दिवस म्हणून साजरे करतात.", ...gq(13) },
 ];
 
-/**
- * Get calendar data for a specific date.
- * Returns default generated data if no specific entry exists.
- */
+// ─── Helper: Get Calendar Day ─────────────────────────────────────────────────
+
 export function getCalendarDay(dateString: string): CalendarDay {
+  // Check manual data
   const existing = calendarData.find((d) => d.date === dateString);
-  if (existing) return existing;
 
+  // Check recurring fixed-date festivals
+  const recurring = getRecurringFestival(dateString);
+
+  if (existing) {
+    // Merge recurring data if not already in manual entry
+    const merged = recurring && !existing.festival
+      ? { ...existing, ...recurring }
+      : existing;
+    return { ...merged, dotColors: getDotColors(merged as CalendarDay) } as CalendarDay;
+  }
+
+  // Build from recurring + generated data
   const date = new Date(dateString);
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const dayNamesMr = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-  const tithis = ["Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Purnima"];
-  const tithisMr = ["प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी", "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पौर्णिमा"];
-  const nakshatras = ["Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishtha", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"];
-  const nakshatrasMr = ["अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशीर्ष", "आर्द्रा", "पुनर्वसु", "पुष्य", "आश्लेषा", "मघा", "पूर्वाफाल्गुनी", "उत्तराफाल्गुनी", "हस्त", "चित्रा", "स्वाती", "विशाखा", "अनुराधा", "ज्येष्ठा", "मूल", "पूर्वाषाढा", "उत्तराषाढा", "श्रवण", "धनिष्ठा", "शतभिषा", "पूर्वाभाद्रपदा", "उत्तराभाद्रपदा", "रेवती"];
-
-  const didYouKnowFacts = [
-    { en: "India is the world's largest democracy with over 900 million voters.", mr: "भारत जगातील सर्वात मोठी लोकशाही आहे — ९०० दशलक्षाहून अधिक मतदार." },
-    { en: "Chess was invented in India around the 6th century AD.", mr: "बुद्धिबळाचा शोध भारतात सुमारे सहाव्या शतकात लागला." },
-    { en: "India has the world's largest number of post offices.", mr: "भारतात जगातील सर्वाधिक टपाल कार्यालये आहेत." },
-    { en: "The game of Snakes and Ladders originated in ancient India.", mr: "सापशिडीचा खेळ प्राचीन भारतात उत्पन्न झाला." },
-    { en: "Yoga has been practiced in India for over 5,000 years.", mr: "योगाचा सराव भारतात ५,००० वर्षांहून अधिक काळापासून केला जातो." },
-    { en: "India is the birthplace of the decimal system and zero.", mr: "भारत दशांश प्रणाली आणि शून्याचे जन्मस्थान आहे." },
-    { en: "Sanskrit is considered the mother of all European languages.", mr: "संस्कृतला सर्व युरोपियन भाषांची जननी मानले जाते." },
-  ];
-
+  const dow = date.getDay();
   const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-  const tithiIndex = dayOfYear % 15;
-  const nakshatraIndex = dayOfYear % 27;
-  const quoteIndex = dayOfYear % motivationalQuotes.length;
-  const factIndex = dayOfYear % didYouKnowFacts.length;
+  const tIdx = dayOfYear % 15;
+  const nIdx = dayOfYear % 27;
+  const qIdx = dayOfYear % quotes.length;
 
-  const dayOfWeek = date.getDay();
-  const fact = didYouKnowFacts[factIndex];
-
-  return {
+  const base: CalendarDay = {
     date: dateString,
-    tithi: tithis[tithiIndex],
-    tithiMr: tithisMr[tithiIndex],
-    nakshatra: nakshatras[nakshatraIndex],
-    nakshtraMr: nakshatrasMr[nakshatraIndex],
-    vaar: dayNames[dayOfWeek],
-    vaarMr: dayNamesMr[dayOfWeek],
-    paksha: tithiIndex < 15 ? "Shukla" : "Krishna",
-    pakshaMr: tithiIndex < 15 ? "शुक्ल" : "कृष्ण",
-    indianSignificance: [`Tithi • ${tithis[tithiIndex]} ${tithiIndex < 15 ? "Shukla" : "Krishna"} Paksha`],
-    indianSignificanceMr: [`तिथी • ${tithiIndex < 15 ? "शुक्ल" : "कृष्ण"} पक्ष ${tithisMr[tithiIndex]}`],
-    didYouKnow: fact.en,
-    didYouKnowMr: fact.mr,
-    quote: motivationalQuotes[quoteIndex].en,
-    quoteMr: motivationalQuotes[quoteIndex].mr,
+    tithi: TITHIS[tIdx],
+    tithiMr: TITHIS_MR[tIdx],
+    nakshatra: NAKSHATRAS[nIdx],
+    nakshtraMr: NAKSHATRAS_MR[nIdx],
+    vaar: VAARS[dow],
+    vaarMr: VAARS_MR[dow],
+    paksha: tIdx < 15 ? "Shukla" : "Krishna",
+    pakshaMr: tIdx < 15 ? "शुक्ल" : "कृष्ण",
+    indianSignificance: [`Tithi • ${TITHIS[tIdx]} ${tIdx < 15 ? "Shukla" : "Krishna"} Paksha`],
+    indianSignificanceMr: [`तिथी • ${tIdx < 15 ? "शुक्ल" : "कृष्ण"} पक्ष ${TITHIS_MR[tIdx]}`],
+    quote: quotes[qIdx].en,
+    quoteMr: quotes[qIdx].mr,
   };
+
+  if (recurring) {
+    const merged = { ...base, ...recurring } as CalendarDay;
+    return { ...merged, dotColors: getDotColors(merged) };
+  }
+
+  return { ...base, dotColors: getDotColors(base) };
 }
 
 export function getTodayString(): string {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
 export function formatDisplayDate(dateString: string, language: "en" | "mr"): string {
   const date = new Date(dateString);
   if (language === "mr") {
-    const monthsMr = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
-    return `${date.getDate()} ${monthsMr[date.getMonth()]} ${date.getFullYear()}`;
+    const months = ["जानेवारी","फेब्रुवारी","मार्च","एप्रिल","मे","जून","जुलै","ऑगस्ट","सप्टेंबर","ऑक्टोबर","नोव्हेंबर","डिसेंबर"];
+    return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   }
-  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }

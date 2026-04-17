@@ -1,0 +1,220 @@
+Build a production-ready React Native Expo app called “WhatsToday” and fix all existing sharing + notification issues.
+
+Core Goal:
+Create a clean Google-style modern mobile app that shows TODAY’S date, tithi, vrat, festival, national day, Marathi events, and important observances using Kalnirnay-inspired logic.
+
+IMPORTANT:
+Use https://kalnirnay.co.in/ as reference for festival structure, categories, and Indian calendar style. Do NOT scrape illegally. Instead create a structured JSON dataset + configurable festival engine inspired by publicly visible calendar data. Include recurring yearly logic + manually editable data files.
+
+-----------------------------------
+MAIN FEATURES
+-----------------------------------
+
+1. TODAY SCREEN
+- Today’s Gregorian date
+- Marathi month
+- Tithi
+- Nakshatra (basic if available)
+- Festival(s) today
+- Vrat / Ekadashi / Sankashti / Pournima / Amavasya
+- Motivational quote
+- “What happened today in history”
+
+2. FULL FESTIVAL COVERAGE
+Consider all major categories:
+
+A) Hindu Festivals
+- Gudi Padwa
+- Ram Navami
+- Hanuman Jayanti
+- Akshaya Tritiya
+- Nag Panchami
+- Raksha Bandhan
+- Janmashtami
+- Ganesh Chaturthi
+- Navratri
+- Dussehra
+- Kojagiri
+- Diwali (all days)
+- Tulsi Vivah
+- Makar Sankranti
+- Maha Shivratri
+- Holi
+- Guru Purnima
+- Vat Pournima
+- Karwa Chauth
+
+B) Marathi Festivals
+- Shiv Jayanti
+- Maharashtra Day
+- Gudhi Padwa
+- Ashadhi Ekadashi
+- Dasara Simollanghan
+- Bhau Beej
+
+C) National / Global Days
+- Republic Day
+- Independence Day
+- Gandhi Jayanti
+- Teachers Day
+- Earth Day
+- Yoga Day
+- Women’s Day
+- Children’s Day
+- New Year
+
+D) Optional Other Religions
+- Eid
+- Christmas
+- Good Friday
+- Buddha Purnima
+- Guru Nanak Jayanti
+
+-----------------------------------
+DATA ENGINE
+-----------------------------------
+
+Create files:
+
+/data/fixedFestivals.json
+/data/lunarFestivals.json
+/data/nationalDays.json
+/data/customEvents.json
+
+Need utility:
+
+getTodayEvents(date)
+getUpcomingEvents()
+getFestivalDetails(id)
+
+Allow admin editing later.
+
+-----------------------------------
+UI DESIGN
+-----------------------------------
+
+Google style clean UI:
+- Material Design
+- White cards
+- soft shadows
+- rounded corners
+- clean typography
+- smooth animation
+- dark mode
+- Marathi + English toggle
+
+Tabs:
+1 Home
+2 Calendar
+3 Upcoming
+4 Share
+5 Settings
+
+-----------------------------------
+CALENDAR SCREEN
+-----------------------------------
+
+Monthly calendar grid with dots under dates:
+red = festival
+blue = vrat
+green = holiday
+
+Tap date => open day details modal.
+
+-----------------------------------
+FIX EXPO SHARE ISSUE
+-----------------------------------
+
+Current share feature broken. Fix using:
+
+expo-sharing
+expo-file-system
+react-native-view-shot
+
+Implement:
+
+1. Convert share card view into image
+2. Save temp PNG
+3. Open native share sheet
+4. Share to WhatsApp / Instagram / Telegram etc.
+
+Add fallback:
+If sharing unavailable, use text share via Share API.
+
+-----------------------------------
+SHARE CARD
+-----------------------------------
+
+Beautiful image card:
+- Date
+- Festival name
+- Quote
+- App branding
+- Gradient background
+
+Button:
+“Share Today”
+
+-----------------------------------
+FIX EXPO NOTIFICATION ISSUE
+-----------------------------------
+
+Use expo-notifications properly.
+
+Need:
+
+1. Ask permission on first launch
+2. Daily 7:00 AM notification
+3. Festival eve reminder
+4. Today festival alert
+5. Android notification channel fix
+6. Works on physical device
+
+Notification examples:
+“आज गुढी पाडवा आहे 🌸”
+“Tomorrow is Ganesh Chaturthi 🙏”
+
+-----------------------------------
+TECH STACK
+-----------------------------------
+
+Expo latest
+React Navigation
+AsyncStorage
+expo-notifications
+expo-sharing
+expo-file-system
+react-native-view-shot
+react-native-paper
+date-fns
+
+-----------------------------------
+BONUS FEATURES
+-----------------------------------
+
+- Widget-ready architecture
+- Offline mode
+- Search festivals
+- Add custom birthdays
+- Export reminders
+- Voice reading of today events
+
+-----------------------------------
+DELIVERABLES
+-----------------------------------
+
+1. Clean folder structure
+2. Working Android Expo build
+3. No TypeScript errors
+4. No share crash
+5. Notifications working
+6. Ready for Play Store publish
+
+-----------------------------------
+IMPORTANT
+-----------------------------------
+
+If lunar dates are difficult, create abstraction layer so I can later plug API / Panchang service.
+
+Generate complete code now.
+```0
