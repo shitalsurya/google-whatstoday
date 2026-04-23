@@ -5,7 +5,7 @@
 
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 import { CalendarDay, getMarathiMonth } from "@/data/festivals";
 
@@ -29,20 +29,23 @@ export function ShareCard({ day, language }: ShareCardProps) {
     ? `${day.tithiMr} • ${day.pakshaMr} पक्ष`
     : `${day.tithi} • ${day.paksha} Paksha`;
   const marathiMonthLabel = isMr ? mm.nameMr : mm.name;
-  const quote = isMr ? day.quoteMr : day.quote;
+  const quote = isMr ? day.historyFactMr : day.historyFact;
 
   return (
     <LinearGradient
-      colors={["#c0392b", "#e05c1a", "#f5a623"]}
+     colors={["#4285F4", "#34A853", "#FBBC05", "#EA4335"]}
+     // colors={["#c0392b", "#e05c1a", "#f5a623"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.card}
     >
       {/* Om Symbol / branding top */}
       <View style={styles.topRow}>
-        <Text style={styles.omSymbol}>🪔</Text>
+         <Image source={require('@/assets/images/smallicon.png')}
+          style={{ width: 60, height: 60 }}
+        />
         <Text style={styles.brandName}>WhatsToday</Text>
-        <Text style={styles.subBrand}>{isMr ? "भारतीय पंचांग" : "Indian Calendar"}</Text>
+        <Text style={styles.subBrand}>{isMr ? "स्मार्ट कैलेंडर" : "Smart Calendar"}</Text>
       </View>
 
       {/* Divider */}
@@ -83,7 +86,7 @@ export function ShareCard({ day, language }: ShareCardProps) {
 
       {/* Bottom branding */}
       <View style={styles.bottomRow}>
-        <Text style={styles.bottomText}>🇮🇳 WhatsToday • {isMr ? "भारतीय दिनदर्शिका" : "Indian Calendar App"}</Text>
+        <Text style={styles.bottomText}>WhatsToday • {isMr ? "नेक्स्ट-जन स्मार्ट दिनदर्शिका" : "Next-Gen Smart Calendar"}</Text>
       </View>
     </LinearGradient>
   );
@@ -207,7 +210,8 @@ const styles = StyleSheet.create({
   },
   bottomText: {
     color: "rgba(255,255,255,0.7)",
-    fontSize: 11,
+    fontSize: 13,
+    fontWeight: "bold",
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },

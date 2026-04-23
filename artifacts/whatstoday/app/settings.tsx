@@ -327,8 +327,8 @@ export default function SettingsScreen() {
             </Text>
             <Text style={[styles.aboutDesc, { color: colors.mutedForeground }]}>
               {isMr
-                ? "कलनिर्णयावर आधारित भारतीय दिनदर्शिका अँप. तिथी, नक्षत्र आणि सणांची माहिती दररोज मिळवा."
-                : "An Indian calendar app inspired by Kalnirnay. Get daily tithi, nakshatra, and festival information."}
+                ? "त्योहार, तिथि, खास तारीखों और रिमाइंडर्स के लिए नेक्स्ट-जन स्मार्ट नेक्स्ट-जन स्मार्ट दिनदर्शिका"
+                : "The next-gen smart calendar for festivals, tithi, special dates, and reminders. Stay in sync with the cosmic rhythm!"}
             </Text>
           </View>
         </View>

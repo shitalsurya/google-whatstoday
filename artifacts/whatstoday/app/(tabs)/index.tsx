@@ -317,9 +317,9 @@ export default function HomeScreen() {
             </Pressable>
 
             <Text style={styles.modalHint}>
-              {isMr
+              {/* {isMr
                 ? "WhatsApp, Instagram, Telegram आणि इतर apps वर शेअर होईल"
-                : "Opens native share sheet — WhatsApp, Telegram, Instagram & more"}
+                : "Opens native share sheet — WhatsApp, Telegram, Instagram & more"} */}
             </Text>
           </View>
         </View>
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    backgroundColor: "#e05c1a",
+    backgroundColor: "#4285F4",
     paddingVertical: 16,
     borderRadius: 16,
   },
