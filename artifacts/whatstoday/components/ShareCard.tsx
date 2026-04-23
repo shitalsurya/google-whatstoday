@@ -62,31 +62,30 @@ export function ShareCard({ day, language }: ShareCardProps) {
         </View>
       </View>
 
-      {/* Festival */}
-      {festival ? (
-        <View style={styles.festivalBlock}>
-          <View style={styles.festivalLine} />
-          <Text style={styles.festivalName}>🎊 {festival}</Text>
-          <View style={styles.festivalLine} />
-        </View>
-      ) : (
-        <View style={styles.festivalBlock}>
-          <View style={styles.festivalLine} />
-          <Text style={styles.noFestivalText}>
-            {isMr ? "आजचे पंचांग" : "Today's Panchang"}
-          </Text>
-          <View style={styles.festivalLine} />
-        </View>
-      )}
+   {/* Festival */}
+{festival && (
+  <View>
+  <View style={styles.festivalBlock}>
+    <View style={styles.festivalLine} />
+
+    <Text style={styles.festivalName}>
+      🎉 {festival}
+    </Text>
+
+    <View style={styles.festivalLine} />
+  </View>
+
 
       {/* Quote */}
       <View style={styles.quoteBlock}>
         <Text style={styles.quoteText}>"{quote}"</Text>
       </View>
-
+      
+  </View>
+)}
       {/* Bottom branding */}
       <View style={styles.bottomRow}>
-        <Text style={styles.bottomText}>WhatsToday • {isMr ? "नेक्स्ट-जन स्मार्ट दिनदर्शिका" : "Next-Gen Smart Calendar"}</Text>
+        <Text style={styles.bottomText}>Shared from WhatsToday • {isMr ? "नेक्स्ट-जन स्मार्ट दिनदर्शिका" : "Next-Gen Smart Calendar"}</Text>
       </View>
     </LinearGradient>
   );

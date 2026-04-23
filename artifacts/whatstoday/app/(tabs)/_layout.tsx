@@ -5,6 +5,7 @@ import { SymbolView } from "expo-symbols";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DARK_BG = "#0f0f1a";
 const DARK_BORDER = "#2a2a3a";
@@ -15,7 +16,7 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="calendar">
-        <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
+        {/* <Icon sf={{ default: "calendar", selected: "calendar.fill" }} /> */}
         <Label>Calender</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">
@@ -29,7 +30,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-
+const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -42,7 +43,8 @@ function ClassicTabLayout() {
           borderTopWidth: 1,
           borderTopColor: DARK_BORDER,
           elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          height: 60 + insets.bottom,
+           paddingBottom: insets.bottom,
         },
         tabBarBackground: () =>
           isWeb ? (

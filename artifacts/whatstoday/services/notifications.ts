@@ -89,14 +89,13 @@ export async function scheduleDailyMorningNotification(
 
   try {
     await cancelNotificationsByType("daily_morning");
-
     const title = festivalName
-      ? `🌅 आज ${festivalName} आहे!`
-      : "🌅 शुभ प्रभात! आजचे पंचांग";
+      ? `📅 Today is ${festivalName}!`
+      : "📅 Good Morning! Today's Importance";
 
-    const body = festivalName
-      ? `${tithiInfo} | WhatsToday`
-      : `${tithiInfo} — WhatsToday पहा`;
+   const body = festivalName
+  ? `${tithiInfo} | WhatsToday`
+  : `${tithiInfo} — Check WhatsToday`;
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
@@ -138,8 +137,8 @@ export async function scheduleFestivalEveNotification(
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `🎊 उद्या ${festivalName}!`,
-        body: `उद्याच्या ${festivalName} साठी तयार व्हा — WhatsToday पहा`,
+       title: `🔔 Tomorrow is ${festivalName}!`,
+        body: `Get ready for ${festivalName} tomorrow — Check WhatsToday`,
         sound: "default",
         data: { type: "festival_eve", festival: festivalName },
         ...(Platform.OS === "android" ? { channelId: "whatstoday-festival" } : {}),
