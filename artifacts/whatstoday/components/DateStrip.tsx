@@ -33,11 +33,12 @@ function generateDates(centerDate: string, count: number = 14): string[] {
   return dates;
 }
 
-function getDayLabel(dateString: string, language: "en" | "mr"): { day: string; date: number } {
+function getDayLabel(dateString: string, language: "en" | "mr" | "hi"): { day: string; date: number } {
   const date = new Date(dateString);
   const dayNames = {
     en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     mr: ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"],
+    hi: ["रवि", "सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि"],
   };
   return {
     day: dayNames[language][date.getDay()],

@@ -15,13 +15,17 @@ const INACTIVE_TINT = "#888888";
 function NativeTabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="calendar">
-        {/* <Icon sf={{ default: "calendar", selected: "calendar.fill" }} /> */}
-        <Label>Calender</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "questionmark.square", selected: "questionmark.square.fill" }} />
-        <Label>What's Today</Label>
+        <Icon sf={{ default: "house", selected: "house.fill" }} />
+        <Label>Home</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="calendar">
+        <Icon sf={{ default: "calendar", selected: "calendar" }} />
+        <Label>Explore</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+        <Label>Settings</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -30,7 +34,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
-const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -44,7 +48,7 @@ const insets = useSafeAreaInsets();
           borderTopColor: DARK_BORDER,
           elevation: 0,
           height: 60 + insets.bottom,
-           paddingBottom: insets.bottom,
+          paddingBottom: insets.bottom,
         },
         tabBarBackground: () =>
           isWeb ? (
@@ -57,9 +61,21 @@ const insets = useSafeAreaInsets();
       }}
     >
       <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="house" tintColor={color} size={22} />
+            ) : (
+              <Feather name="home" size={21} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
         name="calendar"
         options={{
-          title: "Calender",
+          title: "Explore",
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="calendar" tintColor={color} size={22} />
@@ -69,14 +85,14 @@ const insets = useSafeAreaInsets();
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="settings"
         options={{
-          title: "What's Today",
+          title: "Settings",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="questionmark.square" tintColor={color} size={22} />
+              <SymbolView name="gearshape" tintColor={color} size={22} />
             ) : (
-              <MaterialCommunityIcons name="calendar-question" size={22} color={color} />
+              <Feather name="settings" size={21} color={color} />
             ),
         }}
       />

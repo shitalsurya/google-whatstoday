@@ -11,11 +11,11 @@ import { CalendarDay, getMarathiMonth } from "@/data/festivals";
 
 interface ShareCardProps {
   day: CalendarDay;
-  language: "en" | "mr";
+  language: "en" | "mr" | "hi";
 }
 
 export function ShareCard({ day, language }: ShareCardProps) {
-  const isMr = language === "mr";
+  const isMr = language !== "en";
   const mm = getMarathiMonth(day.date);
 
   const date = new Date(day.date);

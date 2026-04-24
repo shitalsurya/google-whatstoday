@@ -1,0 +1,229 @@
+You are an expert React Native + Expo + Replit developer.
+
+Upgrade my EXISTING React Native Expo app called “What’s Today 🎉”.
+
+IMPORTANT:
+- This is an existing app, not a new project.
+- First scan current project structure.
+- Reuse existing components, APIs, navigation, storage, theme, and state.
+- Preserve all working features.
+- Maintain backward compatibility.
+- Optimize Android first, keep iOS-ready.
+
+====================================================
+CRITICAL PRESERVATION RULE
+====================================================
+
+Keep ALL existing sections exactly as they are:
+
+1. Indian Significance
+2. On This Day in History
+3. Did You Know
+4. Share Card
+5. Existing language support
+6. Existing today events
+
+Only improve styling if needed.
+
+====================================================
+NAVIGATION UPDATE
+====================================================
+
+Move Settings to THIRD TAB in bottom navigation.
+
+Tabs:
+
+1st = Home  
+2nd = Existing second tab / Explore  
+3rd = Settings
+
+====================================================
+HOME SCREEN UPGRADE
+====================================================
+
+Modern dashboard while preserving old content.
+
+HEADER:
+What's Today 🎉  
+📅 24 April, Friday
+
+Top right:
+- Language switcher
+
+QUICK CHIPS:
+[Tithi] [Nakshatra] [Yoga] [Karana]
+
+UTILITY CARDS:
+🌅 Sunrise / Sunset  
+🌙 Moonrise / Moonset  
+⏰ Rahu Kaal  
+🟢 Abhijit Muhurat  
+🙏 Brahma Muhurat  
+🎊 Festival Alert
+
+====================================================
+HIGH VALUE DAILY FEATURES
+====================================================
+
+1. Today Key Timings
+
+- Sunrise
+- Sunset
+- Moonrise
+- Moonset
+- Rahu Kaal
+- Brahma Muhurat
+- Abhijit Muhurat
+
+2. Festival Alerts
+
+🔔 Today: Ram Navami  
+🌙 Tomorrow: Ekadashi  
+📅 Coming Soon: Akshay Tritiya
+
+3. Auspicious Badge
+
+🟢 शुभ दिवस  
+🟡 सामान्य दिवस  
+🔴 विशेष सावधान
+
+4. Daily Suggestion Card
+
+Good for:
+- Work start
+- पूजा
+- Study
+- Travel
+
+Avoid:
+- Major purchases
+
+====================================================
+KEEP EXISTING SECTIONS BELOW
+====================================================
+
+After new dashboard keep current order:
+
+1. Indian Significance  
+2. On This Day in History  
+3. Did You Know  
+4. Share Card
+
+====================================================
+ANDROID HOME SCREEN WIDGET
+====================================================
+
+Build Android widget support.
+
+Widget content:
+
+What's Today 🎉
+
+📅 24 April, Friday  
+🎉 Ram Navami  
+🇮🇳 National Panchayati Raj Day  
+💡 Today matters because...
+
+Tap opens app Home screen.
+
+Auto refresh daily at midnight.
+
+====================================================
+AUTO UPDATE FEATURE (VERY IMPORTANT)
+====================================================
+
+Implement app update system so existing users receive all new functionalities easily.
+
+Use best method for Expo + Android:
+
+PRIMARY:
+- Expo Updates (OTA updates) for JS/UI/content changes
+
+SECONDARY:
+- In-App Update prompt for Play Store native version upgrades
+
+Features:
+
+1. Silent background check on app open
+2. If OTA update available:
+   - download automatically
+   - prompt user: “New improvements available. Restart now?”
+3. If Play Store version update available:
+   - flexible update prompt
+4. Force update support for critical versions
+5. Show “What’s New” modal after update:
+   - Widget support
+   - New dashboard
+   - Festival alerts
+   - Faster performance
+
+Ensure existing installed users can receive updates without reinstalling.
+
+====================================================
+SETTINGS TAB (3RD TAB)
+====================================================
+
+Include:
+
+- Show Panchang Data
+- Show Muhurat
+- Show Festival Alerts
+- Show Daily Suggestions
+- Widget Auto Refresh
+- Auto Update Enabled
+- Check for Updates
+- Dark Mode
+- Language: English / हिंदी / मराठी
+- Rate App
+- Share App
+- Privacy Policy
+
+====================================================
+TECHNICAL IMPLEMENTATION
+====================================================
+
+Use / create:
+
+- updateService.ts
+- versionConfig.ts
+- widgetService.ts
+- panchangUtils.ts
+
+Add proper version handling:
+- currentVersion
+- minimumSupportedVersion
+- latestVersion
+
+====================================================
+PERFORMANCE
+====================================================
+
+- Fast launch
+- Smooth scroll
+- Cached data
+- No lag
+- Efficient renders
+
+====================================================
+DELIVERABLES
+====================================================
+
+Implement directly in existing codebase and provide:
+
+1. Files changed
+2. Dependencies added
+3. OTA update setup steps
+4. Play Store in-app update setup
+5. Widget setup
+6. Testing steps
+7. Release build steps
+
+====================================================
+IMPORTANT
+====================================================
+
+Do NOT create new app.
+
+Upgrade existing project only.
+
+Preserve all current features while adding modern update system so old users automatically receive new features.

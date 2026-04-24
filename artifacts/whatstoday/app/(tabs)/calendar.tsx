@@ -59,7 +59,7 @@ interface CalendarGridProps {
   month: number;
   selectedDate: string;
   onSelectDate: (date: string) => void;
-  language: "en" | "mr";
+  language: "en" | "mr" | "hi";
 }
 
 function CalendarGrid({ year, month, selectedDate, onSelectDate, language }: CalendarGridProps) {
@@ -75,7 +75,7 @@ function CalendarGrid({ year, month, selectedDate, onSelectDate, language }: Cal
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const dayLabels = language === "mr" ? DAYS_MR : DAYS_EN;
+  const dayLabels = language === "en" ? DAYS_EN : DAYS_MR;
 
   return (
     <View style={styles.grid}>
@@ -149,12 +149,12 @@ function CalendarGrid({ year, month, selectedDate, onSelectDate, language }: Cal
 
 interface DayModalProps {
   dateStr: string;
-  language: "en" | "mr";
+  language: "en" | "mr" | "hi";
   onClose: () => void;
 }
 
 function DayDetailModal({ dateStr, language, onClose }: DayModalProps) {
-  const isMr = language === "mr";
+  const isMr = language !== "en";
   const day = getCalendarDay(dateStr);
   const mm = getMarathiMonth(dateStr);
 
@@ -178,7 +178,7 @@ function DayDetailModal({ dateStr, language, onClose }: DayModalProps) {
             {/* Header */}
             <View style={modal.header}>
               <View style={{ flex: 1 }}>
-                <Text style={modal.dateLine}>{formatDisplayDate(dateStr, language)}</Text>
+                <Text style={modal.dateLine}>{formatDisplayDate(dateStr, isMr ? "mr" : "en")}</Text>
                 <Text style={modal.dayLine}>
                   {isMr ? day.vaarMr : day.vaar} • {isMr ? mm.nameMr : mm.name}
                 </Text>

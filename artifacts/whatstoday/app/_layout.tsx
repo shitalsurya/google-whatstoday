@@ -9,19 +9,26 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
-import { Platform } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AppProvider } from "@/context/AppContext";
+import { WhatsNewModal } from "@/components/WhatsNewModal";
+import { AppProvider, useApp } from "@/context/AppContext";
 import {
   setupNotificationChannels,
   requestNotificationPermission,
   scheduleDailyMorningNotification,
 } from "@/services/notifications";
 import { getCalendarDay, getTodayString } from "@/data/festivals";
+import {
+  silentBackgroundCheck,
+  reloadAppForUpdate,
+  shouldShowWhatsNew,
+  markWhatsNewSeen,
+} from "@/services/updateService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,18 +40,13 @@ async function initializeNotifications() {
   if (Platform.OS === "web") return;
 
   try {
-    // 1. Set up Android channels
     await setupNotificationChannels();
 
-    // 2. Check if we've already asked for permission
     const alreadyInitialized = await AsyncStorage.getItem(NOTIF_INIT_KEY);
     if (!alreadyInitialized) {
-      // First launch — request permission
       const granted = await requestNotificationPermission();
       await AsyncStorage.setItem(NOTIF_INIT_KEY, "true");
-
       if (granted) {
-        // Schedule daily 7AM notification
         const today = getTodayString();
         const day = getCalendarDay(today);
         const festivalName = day.festival ?? day.mainEvent;
@@ -52,7 +54,6 @@ async function initializeNotifications() {
         await scheduleDailyMorningNotification(festivalName, tithiInfo);
       }
     } else {
-      // Already initialized — re-schedule if permissions are granted
       const granted = await requestNotificationPermission();
       if (granted) {
         const today = getTodayString();
@@ -63,20 +64,74 @@ async function initializeNotifications() {
       }
     }
   } catch (err) {
-    // Silently ignore notification errors — non-critical
     console.warn("[Notifications] Initialization failed:", err);
   }
 }
 
-function RootLayoutNav() {
+/**
+ * Inner component that has access to AppContext (for language).
+ * Mounts the WhatsNewModal and silently checks for OTA updates.
+ */
+function AppInner() {
+  const { language } = useApp();
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // 1. Whats New
+      try {
+        if (await shouldShowWhatsNew()) {
+          if (!cancelled) setShowWhatsNew(true);
+        }
+      } catch {
+        /* ignore */
+      }
+
+      // 2. Background OTA check
+      try {
+        const ready = await silentBackgroundCheck();
+        if (ready && Platform.OS !== "web") {
+          // Update downloaded — gentle prompt (non-blocking).
+          // Skip the prompt if we're showing the What's New modal.
+          if (!cancelled) {
+            setTimeout(() => {
+              Alert.alert(
+                "Update ready",
+                "New improvements available. Restart now?",
+                [
+                  { text: "Later", style: "cancel" },
+                  { text: "Restart", onPress: () => reloadAppForUpdate() },
+                ],
+              );
+            }, 1500);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCloseWhatsNew = async () => {
+    setShowWhatsNew(false);
+    await markWhatsNewSeen();
+  };
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="settings"
-        options={{ headerShown: false, presentation: "card" }}
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+      <WhatsNewModal
+        visible={showWhatsNew}
+        onClose={handleCloseWhatsNew}
+        language={language}
       />
-    </Stack>
+    </>
   );
 }
 
@@ -91,7 +146,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
-      // Initialize notifications after app is ready
       initializeNotifications();
     }
   }, [fontsLoaded, fontError]);
@@ -104,7 +158,7 @@ export default function RootLayout() {
         <AppProvider>
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView>
-              <RootLayoutNav />
+              <AppInner />
             </GestureHandlerRootView>
           </QueryClientProvider>
         </AppProvider>

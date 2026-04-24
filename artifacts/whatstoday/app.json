@@ -2,11 +2,14 @@
   "expo": {
     "name": "WhatsToday",
     "slug": "whatstoday",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "whatstoday",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
@@ -17,7 +20,7 @@
     },
     "android": {
       "package": "com.shitalsurya.LifeLens",
-      "versionCode": 20
+      "versionCode": 21
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -36,11 +39,17 @@
           "icon": "./assets/images/icon.png",
           "color": "#e05c1a"
         }
-      ]
+      ],
+      "./plugins/withWhatsTodayWidget"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "extra": {
       "router": {
