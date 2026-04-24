@@ -2,7 +2,7 @@
   "expo": {
     "name": "WhatsToday",
     "slug": "whatstoday",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "whatstoday",
@@ -16,7 +16,8 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "com.shitalsurya.LifeLens"
+      "package": "com.shitalsurya.LifeLens",
+      "versionCode": 20
     },
     "web": {
       "favicon": "./assets/images/icon.png"
